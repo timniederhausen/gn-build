@@ -1,0 +1,54 @@
+declare_args() {
+  # Version of Visual Studio pointed to by the visual_studio_path.
+  # Use "2013" for Visual Studio 2013.
+  visual_studio_version = "2013"
+
+  # Path to Visual Studio.
+  visual_studio_path = ""
+
+  # Full path to the Windows SDK, not including a backslash at the end.
+  # This value is the default location, override if you have a different
+  # installation location.
+  windows_sdk_path = "C:\Program Files (x86)\Microsoft SDKs\Windows\v7.1A"
+
+  # Denotes whether to use /DEBUG:FASTLINK
+  is_win_fastlink = false
+
+  # Path of the Windows Clang installation
+  win_clang_prefix = ""
+}
+
+assert(visual_studio_version != "",
+       "You must set visual_studio_version on Windows")
+
+if (visual_studio_path == "") {
+  visual_studio_path = exec_script("toolchain.py",
+                                   [
+                                     "get_vs_dir",
+                                     visual_studio_version,
+                                   ],
+                                   "trim string")
+}
+
+if (is_clang) {
+  assert(win_clang_prefix != "",
+         "You must set win_clang_prefix when using Clang on Windows")
+}
+
+if (host_os == "win") {
+  clang_cl = "clang-cl.exe"
+} else {
+  clang_cl = "clang-cl"
+}
+
+toolchain_data = exec_script("toolchain.py",
+                             [
+                               "setup_toolchain",
+                               visual_studio_path,
+                             ],
+                             "scope")
+
+# These are hardcoded in toolchain.py
+x86_environment_path = "environment.x86"
+x64_environment_path = "environment.x64"
+# TODO(tim): WinRT

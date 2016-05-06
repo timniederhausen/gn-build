@@ -1,0 +1,1003 @@
+# Copyright (c) 2013 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/compiler.gni")
+import("//build/config/sanitizers/sanitizers.gni")
+
+if (current_cpu == "arm") {
+  import("//build/config/arm.gni")
+}
+
+if (current_cpu == "mipsel" || current_cpu == "mips64el") {
+  import("//build/config/mips.gni")
+}
+
+if (is_win) {
+  import("//build/toolchain/win/settings.gni")
+} else if (!is_mac) {
+  import("//build/toolchain/posix/settings.gni")
+}
+
+declare_args() {
+  # Default to warnings as errors for default workflow, where we catch
+  # warnings with known toolchains. Allow overriding this e.g. for Chromium
+  # builds on Linux that could use a different version of the compiler.
+  # With GCC, warnings in no-Chromium code are always not treated as errors.
+  treat_warnings_as_errors = false
+
+  # Compile in such a way as to make it possible for the profiler to unwind full
+  # stack frames. Setting this flag has a large effect on the performance of the
+  # generated code than just setting profiling, but gives the profiler more
+  # information to analyze.
+  # Requires profiling to be set to true.
+  enable_full_stack_frames_for_profiling = false
+
+  # When set (the default) enables C++ iterator debugging in debug builds.
+  # Iterator debugging is always off in release builds (technically, this flag
+  # affects the "debug" config, which is always available but applied by
+  # default only in debug builds).
+  #
+  # Iterator debugging is generally useful for catching bugs. But it can
+  # introduce extra locking to check the state of an iterator against the state
+  # of the current object. For iterator- and thread-heavy code, this can
+  # significantly slow execution.
+  enable_iterator_debugging = false
+
+  # TODO(GYP): We should be using 64-bit gold for linking on both 64-bit Linux
+  # and 32-bit linux; 32-bit Gold runs out of address-space on 32-bit builds.
+  # However, something isn't quite working right on the 32-bit builds.
+  use_gold = is_linux && (current_cpu == "x64" || current_cpu == "arm")
+
+  # When we are going to use gold we need to find it.
+  # This is initialized below, after use_gold might have been overridden.
+  gold_path = ""
+}
+
+# compiler ---------------------------------------------------------------------
+#
+# Base compiler configuration.
+#
+# See also "runtime_library" below for related stuff and a discussion about
+# where stuff should go. Put warning related stuff in the "warnings" config.
+
+config("compiler") {
+  asmflags = []
+  cflags = []
+  cflags_c = []
+  cflags_cc = []
+  cflags_objc = []
+  cflags_objcc = []
+  ldflags = []
+  defines = []
+  configs = []
+
+  # System-specific flags. If your compiler flags apply to one of the
+  # categories here, add it to the associated file to keep this shared config
+  # smaller.
+  if (is_win) {
+    configs += [ "//build/config/win:compiler" ]
+  } else if (is_mac) {
+    configs += [ "//build/config/mac:compiler" ]
+  } else {
+    configs += [ "//build/config/posix:compiler" ]
+  }
+
+  # See the definitions below.
+  configs += [
+    ":compiler_cpu_abi",
+    ":compiler_codegen",
+  ]
+
+  # In general, Windows is totally different, but all the other builds share
+  # some common GCC configuration.
+  if (!is_win) {
+    # Common GCC compiler flags setup.
+    # --------------------------------
+    cflags += [ "-fno-strict-aliasing" ]
+    cflags_cc += [
+      # Not exporting C++ inline functions can generally be applied anywhere
+      # so we do so here. Normal function visibility is controlled by
+      # :symbol_visibility_hidden.
+      "-fvisibility-inlines-hidden",
+    ]
+
+    # Stack protection.
+    if (is_mac) {
+      cflags += [ "-fstack-protector-all" ]
+    } else if (is_posix) {
+      # https://outflux.net/blog/archives/2014/01/27/fstack-protector-strong/
+      cflags += [ "-fstack-protector-strong" ]
+    }
+
+    # Linker warnings.
+    if (!is_mac && !is_freebsd) {
+      ldflags += [ "-Wl,--fatal-warnings" ]
+    }
+  }
+
+  if (is_clang && is_debug) {
+    # Allow comparing the address of references and 'this' against 0
+    # in debug builds. Technically, these can never be null in
+    # well-defined C/C++ and Clang can optimize such checks away in
+    # release builds, but they may be used in asserts in debug builds.
+    cflags_cc += [
+      "-Wno-undefined-bool-conversion",
+      "-Wno-tautological-undefined-compare",
+    ]
+  }
+
+  # Non-Mac Posix compiler flags setup.
+  # -----------------------------------
+  if (is_posix && !is_mac) {
+    if (enable_profiling && !is_debug) {
+      cflags += [
+        "-fno-omit-frame-pointer",
+        "-g",
+      ]
+
+      if (enable_full_stack_frames_for_profiling) {
+        cflags += [
+          "-fno-inline",
+          "-fno-optimize-sibling-calls",
+        ]
+      }
+    }
+  }
+
+  # Linux/Android common flags setup.
+  # ---------------------------------
+  if (is_linux) {
+    cflags += [
+      "-fPIC",
+      "-pipe",  # Use pipes for communicating between sub-processes. Faster.
+    ]
+
+    ldflags += [
+      "-fPIC",
+      "-Wl,-z,noexecstack",
+      "-Wl,-z,now",
+      "-Wl,-z,relro",
+    ]
+    if (!using_sanitizer && !use_cfi_diag) {
+      ldflags += [ "-Wl,-z,defs" ]
+    }
+  }
+
+  # Linux-specific compiler flags setup.
+  # ------------------------------------
+  if (use_gold) {
+    ldflags += [
+      "-B$gold_path",
+
+      # Newer gccs and clangs support -fuse-ld, use the flag to force gold
+      # selection.
+      # gcc -- http://gcc.gnu.org/onlinedocs/gcc-4.8.0/gcc/Optimize-Options.html
+      "-fuse-ld=gold",
+
+      # Experimentation found that using four linking threads
+      # saved ~20% of link time.
+      # https://groups.google.com/a/chromium.org/group/chromium-dev/browse_thread/thread/281527606915bb36
+      # Only apply this to the target linker, since the host
+      # linker might not be gold, but isn't used much anyway.
+      #"-Wl,--threads",
+      #"-Wl,--thread-count=4",
+    ]
+
+    if (!using_sanitizer) {
+      ldflags += [ "-Wl,--icf=all" ]
+    }
+  }
+
+  # Clang-specific compiler flags setup.
+  # ------------------------------------
+  if (is_clang) {
+    cflags += [ "-fcolor-diagnostics" ]
+  } else if (!is_win) {
+    cflags += [ "-fdiagnostics-color" ]
+  }
+
+  # Makes builds independent of absolute file path.
+  # clang-cl (used if is_win) doesn't expose this flag.
+  if (is_clang && !is_win && clang_version >= 30800) {
+    absolute_path = rebase_path("//.")
+    cflags += [ "-fdebug-prefix-map=$absolute_path=." ]
+  }
+
+  # C++14 compiler flags setup.
+  # ---------------------------
+  if (!is_win) {
+    cflags_cc += [ "-std=c++14" ]
+  }
+
+  # Pass the same C/C++ flags to the objective C/C++ compiler.
+  cflags_objc += cflags_c
+  cflags_objcc += cflags_cc
+
+  # Assign any flags set for the C compiler to asmflags so that they are sent
+  # to the assembler. The Windows assembler takes different types of flags
+  # so only do so for posix platforms.
+  if (is_posix) {
+    asmflags += cflags
+    asmflags += cflags_c
+  }
+}
+
+# This provides the basic options to select the target CPU and ABI.
+# It is factored out of "compiler" so that special cases can use this
+# without using everything that "compiler" brings in.  Options that
+# tweak code generation for a particular CPU do not belong here!
+# See "compiler_codegen", below.
+config("compiler_cpu_abi") {
+  cflags = []
+  ldflags = []
+
+  if (is_posix && !is_mac) {
+    # CPU architecture. We may or may not be doing a cross compile now, so for
+    # simplicity we always explicitly set the architecture.
+    if (current_cpu == "x64") {
+      cflags += [
+        "-m64",
+        "-march=x86-64",
+      ]
+      ldflags += [ "-m64" ]
+    } else if (current_cpu == "x86") {
+      cflags += [ "-m32" ]
+      ldflags += [ "-m32" ]
+    } else if (current_cpu == "arm") {
+      if (is_clang) {
+        cflags += [
+          "-target",
+          "arm-linux-gnueabihf",
+        ]
+        ldflags += [
+          "-target",
+          "arm-linux-gnueabihf",
+        ]
+      }
+      cflags += [
+        "-march=$arm_arch",
+        "-mfloat-abi=$arm_float_abi",
+      ]
+      if (arm_use_thumb) {
+        cflags += [ "-mthumb" ]
+      }
+      if (arm_tune != "") {
+        cflags += [ "-mtune=$arm_tune" ]
+      }
+    } else if (current_cpu == "mipsel") {
+      if (mips_arch_variant == "r6") {
+        if (is_clang) {
+          cflags += [
+            "-target",
+            "mipsel-linux-gnu",
+            "-march=mips32r6",
+          ]
+          ldflags += [
+            "-target",
+            "mipsel-linux-gnu",
+          ]
+        } else {
+          cflags += [
+            "-mips32r6",
+            "-Wa,-mips32r6",
+          ]
+          if (is_android) {
+            ldflags += [
+              "-mips32r6",
+              "-Wl,-melf32ltsmip",
+            ]
+          }
+        }
+      } else if (mips_arch_variant == "r2") {
+        if (is_clang) {
+          cflags += [
+            "-target",
+            "mipsel-linux-gnu",
+            "-march=mipsel",
+            "-mcpu=mips32r2",
+          ]
+          ldflags += [
+            "-target",
+            "mipsel-linux-gnu",
+          ]
+        } else {
+          cflags += [
+            "-mips32r2",
+            "-Wa,-mips32r2",
+          ]
+          if (mips_float_abi == "hard" && mips_fpu_mode != "") {
+            cflags += [ "-m$mips_fpu_mode" ]
+          }
+        }
+      } else if (mips_arch_variant == "r1") {
+        if (is_clang) {
+          cflags += [
+            "-target",
+            "mipsel-linux-gnu",
+            "-march=mipsel",
+            "-mcpu=mips32",
+          ]
+          ldflags += [
+            "-target",
+            "mipsel-linux-gnu",
+          ]
+        } else {
+          cflags += [
+            "-mips32",
+            "-Wa,-mips32",
+          ]
+        }
+      }
+
+      if (mips_dsp_rev == 1) {
+        cflags += [ "-mdsp" ]
+      } else if (mips_dsp_rev == 2) {
+        cflags += [ "-mdspr2" ]
+      }
+
+      cflags += [ "-m${mips_float_abi}-float" ]
+    } else if (current_cpu == "mips64el") {
+      if (mips_arch_variant == "r6") {
+        cflags += [
+          "-mips64r6",
+          "-Wa,-mips64r6",
+        ]
+        ldflags += [ "-mips64r6" ]
+      } else if (mips_arch_variant == "r2") {
+        cflags += [
+          "-mips64r2",
+          "-Wa,-mips64r2",
+        ]
+        ldflags += [ "-mips64r2" ]
+      }
+    }
+  }
+
+  asmflags = cflags
+}
+
+# This provides options to tweak code generation that are necessary
+# for particular Chromium code or for working around particular
+# compiler bugs (or the combination of the two).
+config("compiler_codegen") {
+  if (is_posix && current_cpu == "x86") {
+    cflags = [
+      # Intel Core 2 CPU with 64-bit extensions, MMX, SSE, SSE2, SSE3 and SSSE3 instruction set support.
+      "-march=core2",
+
+      # Use SSE for floating point operations
+      "-mfpmath=sse",
+    ]
+  }
+}
+
+# This is separate from :compiler_codegen (and not even a sub-config there)
+# so that some targets can remove it from the list with:
+#   configs -= [ "//build/config/compiler:stackrealign" ]
+config("stackrealign") {
+  if (current_cpu == "x86" && is_freebsd) {
+    if (is_clang) {
+      cflags = [
+        "-mstack-alignment=16",
+        "-mstackrealign",
+      ]
+    } else {
+      # The FreeBSD ABI only mandates 4 byte stack alignment.
+      # Linux on the other hand provides 16 byte alignment,
+      # which GCC/Clang require.
+      # see: http://lists.freebsd.org/pipermail/freebsd-hackers/2011-January/034051.html
+      #      https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=185560
+      # GCC Doc: https://gcc.gnu.org/onlinedocs/gcc-4.8.4/gcc/i386-and-x86-64-Options.html#i386-and-x86-64-Options
+      # Note: alignment = pow(2, <number below>)
+      cflags = [
+        "-mpreferred-stack-boundary=4",
+        "-mincoming-stack-boundary=2",
+      ]
+    }
+  }
+}
+
+config("compiler_arm_fpu") {
+  if (current_cpu == "arm") {
+    cflags = [ "-mfpu=$arm_fpu" ]
+    asmflags = cflags
+  }
+}
+
+# This config causes functions not to be automatically exported from shared
+# libraries. By default, all symbols are exported but this means there are
+# lots of exports that slow everything down. In general we explicitly mark
+# which functiosn we want to export from components.
+#
+# Some third_party code assumes all functions are exported so this is separated
+# into its own config so such libraries can remove this config to make symbols
+# public again.
+#
+# See http://gcc.gnu.org/wiki/Visibility
+config("symbol_visibility_hidden") {
+  if (is_posix) {
+    # Note that -fvisibility-inlines-hidden is set globally in the compiler
+    # config since that can almost always be applied.
+    cflags = [ "-fvisibility=hidden" ]
+  }
+}
+
+# runtime_library -------------------------------------------------------------
+#
+# Sets the runtime library and associated options.
+#
+# How do you determine what should go in here vs. "compiler" above? Consider if
+# a target might choose to use a different runtime library (ignore for a moment
+# if this is possible or reasonable on your system). If such a target would want
+# to change or remove your option, put it in the runtime_library config. If a
+# target wants the option regardless, put it in the compiler config.
+
+config("runtime_library") {
+  defines = []
+  configs = []
+
+  # System-specific flags. If your compiler flags apply to one of the
+  # categories here, add it to the associated file to keep this shared config
+  # smaller.
+  if (is_win) {
+    configs += [ "//build/config/win:runtime_library" ]
+  } else if (is_mac) {
+    configs += [ "//build/config/mac:runtime_library" ]
+  }
+
+  if (is_posix) {
+    configs += [ "//build/config/posix:runtime_library" ]
+  }
+}
+
+# default_warnings ------------------------------------------------------------
+#
+config("default_warnings") {
+  cflags = []
+  cflags_cc = []
+
+  if (is_win) {
+    cflags = [ "/W3" ]  # Warning level 3.
+
+    if (treat_warnings_as_errors) {
+      cflags += [ "/WX" ]
+    }
+
+    cflags += [
+      # Warnings permanently disabled:
+
+      # C4091: 'typedef ': ignored on left of 'X' when no variable is
+      #                    declared.
+      # This happens in a number of Windows headers. Dumb.
+      "/wd4091",
+
+      # C4127: conditional expression is constant
+      # This warning can in theory catch dead code and other problems, but
+      # triggers in far too many desirable cases where the conditional
+      # expression is either set by macros or corresponds some legitimate
+      # compile-time constant expression (due to constant template args,
+      # conditionals comparing the sizes of different types, etc.).  Some of
+      # these can be worked around, but it's not worth it.
+      "/wd4127",
+
+      # C4251: 'identifier' : class 'type' needs to have dll-interface to be
+      #        used by clients of class 'type2'
+      # This is necessary for the shared library build.
+      "/wd4251",
+
+      # C4351: new behavior: elements of array 'array' will be default
+      #        initialized
+      # This is a silly "warning" that basically just alerts you that the
+      # compiler is going to actually follow the language spec like it's
+      # supposed to, instead of not following it like old buggy versions did.
+      # There's absolutely no reason to turn this on.
+      "/wd4351",
+
+      # C4355: 'this': used in base member initializer list
+      # It's commonly useful to pass |this| to objects in a class' initializer
+      # list.  While this warning can catch real bugs, most of the time the
+      # constructors in question don't attempt to call methods on the passed-in
+      # pointer (until later), and annotating every legit usage of this is
+      # simply more hassle than the warning is worth.
+      "/wd4355",
+
+      # C4503: 'identifier': decorated name length exceeded, name was
+      #        truncated
+      # This only means that some long error messages might have truncated
+      # identifiers in the presence of lots of templates.  It has no effect on
+      # program correctness and there's no real reason to waste time trying to
+      # prevent it.
+      "/wd4503",
+
+      # Warning C4589 says: "Constructor of abstract class ignores
+      # initializer for virtual base class." Disable this warning because it
+      # is flaky in VS 2015 RTM. It triggers on compiler generated
+      # copy-constructors in some cases.
+      "/wd4589",
+
+      "/wd4100",  # Unreferenced formal function parameter.
+      "/wd4121",  # Alignment of a member was sensitive to packing.
+      "/wd4244",  # Conversion: possible loss of data.
+      "/wd4505",  # Unreferenced local function has been removed.
+      "/wd4510",  # Default constructor could not be generated.
+      "/wd4512",  # Assignment operator could not be generated.
+      "/wd4610",  # Class can never be instantiated, constructor required.
+      "/wd4838",  # Narrowing conversion. Doesn't seem to be very useful.
+      "/wd4995",  # 'X': name was marked as #pragma deprecated
+      "/wd4996",  # Deprecated function warning.
+      "/wd4800",  # Disable warning when forcing value to bool.
+      #"/wd4324",  #'struct_name' : structure was padded due to __declspec(align())
+    ]
+  } else {
+    cflags = [ "-Wall" ]
+
+    if (treat_warnings_as_errors) {
+      cflags += [ "-Werror" ]
+    }
+
+    if (is_clang) {
+      cflags += [ "-Wextra" ]
+    }
+
+    if (is_mac) {
+      # When compiling Objective-C, warns if a method is used whose
+      # availability is newer than the deployment target.
+      cflags += [ "-Wpartial-availability" ]
+    }
+
+    # Suppress warnings about ABI changes on ARM (Clang doesn't give this
+    # warning).
+    if (current_cpu == "arm" && !is_clang) {
+      cflags += [ "-Wno-psabi" ]
+    }
+
+    if (!is_clang) {
+      cflags_cc += [
+        # See comment for -Wno-c++11-narrowing.
+        "-Wno-narrowing",
+      ]
+    }
+  }
+
+  # Common Clang and GCC warning setup.
+  if (!is_win || is_clang) {
+    cflags += [
+      "-Wno-missing-field-initializers",  # "struct foo f = {0};"
+      "-Wno-unused-parameter",  # Unused function parameters.
+    ]
+  }
+
+  if (is_clang) {
+    cflags += [
+      "-Wloop-analysis",
+
+      "-Wno-unused-local-typedef", # unused typedef 'foo'
+
+      # Warns on switches on enums that cover all enum values but
+      # also contain a default: branch.
+      "-Wno-covered-switch-default",
+    ]
+  } else if (!is_win) {
+    cflags += [
+      "-Wno-unused-local-typedefs", # unused typedef 'foo'
+    ]
+  }
+}
+
+# Enables some extra Clang-specific warnings. Some third-party code won't
+# compile with these so may want to remove this config.
+config("clang_warnings") {
+  if (is_clang) {
+    cflags = [
+      "-Wheader-hygiene",
+
+      # Warns when a const char[] is converted to bool.
+      "-Wstring-conversion",
+    ]
+  }
+}
+
+# rtti ------------------------------------------------------------------------
+#
+# Allows turning Run-Time Type Identification on or off.
+
+config("rtti") {
+  if (is_win) {
+    cflags_cc = [ "/GR" ]
+  }
+}
+config("no_rtti") {
+  # CFI diagnostics and UBsan vptr require RTTI.
+  if (!use_cfi_diag && !is_ubsan_vptr) {
+    if (is_win) {
+      cflags_cc = [ "/GR-" ]
+    } else {
+      cflags_cc = [ "-fno-rtti" ]
+      cflags_objcc = cflags_cc
+    }
+  }
+}
+
+# rtti ------------------------------------------------------------------------
+#
+# Allows turning Run-Time Type Identification on or off.
+
+config("exceptions") {
+  if (is_win && !is_clang) {
+    cflags_cc = [ "/EHsc" ]
+  }
+}
+
+config("no_exceptions") {
+  if (!is_win || is_clang) {
+    cflags_cc = [ "-fno-exceptions" ]
+    cflags_objcc = cflags_cc
+  }
+}
+
+# Warnings ---------------------------------------------------------------------
+
+# This will generate warnings when using Clang if code generates exit-time
+# destructors, which will slow down closing the program.
+# TODO(thakis): Make this a blacklist instead, http://crbug.com/101600
+config("wexit_time_destructors") {
+  # TODO: Enable on Windows too, http://crbug.com/404525
+  if (is_clang && !is_win) {
+    cflags = [ "-Wexit-time-destructors" ]
+  }
+}
+
+# Some code presumes that pointers to structures/objects are compatible
+# regardless of whether what they point to is already known to be valid.
+# gcc 4.9 and earlier had no way of suppressing this warning without
+# supressing the rest of them.  Here we centralize the identification of
+# the gcc 4.9 toolchains.
+config("no_incompatible_pointer_warnings") {
+  cflags = []
+  if (is_clang) {
+    cflags += [ "-Wno-incompatible-pointer-types" ]
+  } else if (current_cpu == "mipsel") {
+    cflags += [ "-w" ]
+  }
+}
+
+# Optimization -----------------------------------------------------------------
+#
+# The BUILDCONFIG file sets the "default_optimization" config on targets by
+# default. It will be equivalent to either "optimize" (release) or
+# "no_optimize" (debug) optimization configs.
+#
+# You can override the optimization level on a per-target basis by removing the
+# default config and then adding the named one you want:
+#
+#   configs -= [ "//build/config/compiler:default_optimization" ]
+#   configs += [ "//build/config/compiler:optimize_max" ]
+
+# Shared settings for both "optimize" and "optimize_max" configs.
+# IMPORTANT: On Windows "/O1" and "/O2" must go before the common flags.
+if (is_win) {
+  common_optimize_on_cflags = [
+    "/Ob2",  # Both explicit and auto inlining.
+    "/Oy-",  # Disable omitting frame pointers, must be after /O2.
+    "/Zo",  # Improve debugging of optimized code.
+    "/Zc:inline",  # Remove unreferenced COMDAT (faster links).
+  ]
+  if (!is_asan) {
+    common_optimize_on_cflags += [
+      # Put data in separate COMDATs. This allows the linker
+      # to put bit-identical constants at the same address even if
+      # they're unrelated constants, which saves binary size.
+      # This optimization can't be used when ASan is enabled because
+      # it is not compatible with the ASan ODR checker.
+      "/Gw",
+    ]
+  }
+  common_optimize_on_ldflags = [
+    "/OPT:ICF", # Redundant COMDAT folding.
+    "/OPT:REF",  # Remove unreferenced data.
+    "/LTCG",  # Link-time code generation.
+
+    # Set the number of LTCG code-gen threads to eight. The default is four.
+    # This gives a 5-10% link speedup.
+    "/cgthreads:8",
+  ]
+} else {
+  common_optimize_on_cflags = [
+    # Don't emit the GCC version ident directives, they just end up in the
+    # .comment section taking up binary size.
+    "-fno-ident",
+
+    # Put data and code in their own sections, so that unused symbols
+    # can be removed at link time with --gc-sections.
+    "-fdata-sections",
+    "-ffunction-sections",
+  ]
+  common_optimize_on_ldflags = []
+
+  if (is_mac) {
+    if (symbol_level == 2) {
+      # Mac dead code stripping requires symbols.
+      common_optimize_on_ldflags += [ "-Wl,-dead_strip" ]
+    }
+  } else {
+    # Non-Mac Posix linker flags.
+    common_optimize_on_ldflags += [
+      # Specifically tell the linker to perform optimizations.
+      # See http://lwn.net/Articles/192624/ .
+      "-Wl,-O1",
+      "-Wl,--gc-sections",
+    ]
+
+    if (!using_sanitizer) {
+      # Functions interposed by the sanitizers can make ld think
+      # that some libraries aren't needed when they actually are,
+      # http://crbug.com/234010. As workaround, disable --as-needed.
+      common_optimize_on_ldflags += [ "-Wl,--as-needed" ]
+    }
+  }
+}
+
+# Default "optimization on" config.
+config("optimize") {
+  if (is_win) {
+    # Favor size over speed, /O1 must be before the common flags.
+    cflags = [ "/O1" ] + common_optimize_on_cflags + [ "/Oi" ]
+  } else {
+    cflags = [ "-O2" ] + common_optimize_on_cflags
+  }
+  ldflags = common_optimize_on_ldflags
+}
+
+# Turn off optimizations.
+config("no_optimize") {
+  if (is_win) {
+    cflags = [
+      "/Od",  # Disable optimization.
+      "/Ob0",  # Disable all inlining (on by default).
+      "/RTC1",  # Runtime checks for stack frame and uninitialized variables.
+    ]
+  } else {
+    cflags = [ "-O0" ]
+    ldflags = []
+  }
+}
+
+# Optimization options suited for debug builds.
+config("optimize_debug") {
+  if (is_win) {
+    cflags = [
+      "/RTC1",  # Runtime checks for stack frame and uninitialized variables.
+    ]
+
+    ldflags = [
+      "/OPT:ICF", # Redundant COMDAT folding.
+      "/OPT:REF",  # Remove unreferenced data.
+    ]
+  } else {
+    if (!is_clang) {
+      cflags = [
+        # "Optimize debugging experience.
+        # -Og enables optimizations that do not interfere with debugging."
+        "-Og",
+      ]
+    } else {
+      # We don't have -Og so we emulate it:
+      cflags = [
+        "-O1",
+        "-fno-omit-frame-pointer",
+        "-fno-optimize-sibling-calls",
+      ]
+    }
+
+    cflags += common_optimize_on_cflags
+    ldflags = common_optimize_on_ldflags
+  }
+}
+
+# Turns up the optimization level. On Windows, this implies whole program
+# optimization and link-time code generation which is very expensive and should
+# be used sparingly.
+config("optimize_max") {
+  ldflags = common_optimize_on_ldflags
+  if (is_win) {
+    # Favor speed over size, /O2 must be before the common flags. The GYP
+    # build also specifies /Ot, /Oi, and /GF, but these are implied by /O2.
+    cflags = [ "/O2" ] + common_optimize_on_cflags
+    cflags += [
+      "/GL",  # Whole program optimization.
+
+      # Disable Warning 4702 ("Unreachable code") for the WPO/PGO builds.
+      # Probably anything that this would catch that wouldn't be caught in a
+      # normal build isn't going to actually be a bug, so the incremental
+      # value of C4702 for PGO builds is likely very small.
+      "/wd4702",
+    ]
+  } else {
+    cflags = [ "-O3" ] + common_optimize_on_cflags
+  }
+}
+
+# The default optimization applied to all targets. This will be equivalent to
+# either "optimize" or "optimize_debug", depending on the build flags.
+config("default_optimization") {
+  if (is_debug) {
+    configs = [ ":optimize_debug" ]
+  } else {
+    configs = [ ":optimize" ]
+  }
+}
+
+# Symbols ----------------------------------------------------------------------
+
+# The BUILDCONFIG file sets the "default_symbols" config on targets by
+# default. It will be equivalent to one the three specific symbol levels.
+#
+# You can override the symbol level on a per-target basis by removing the
+# default config and then adding the named one you want:
+#
+#   configs -= [ "//build/config/compiler:default_symbols" ]
+#   configs += [ "//build/config/compiler:symbols" ]
+
+# Full symbols.
+config("symbols") {
+  if (is_win) {
+    cflags = [ "/Zi" ]  # Produce PDB file, no edit and continue.
+    if (is_win_fastlink && visual_studio_version != "2013") {
+      # Tell VS 2015+ to create a PDB that references debug
+      # information in .obj and .lib files instead of copying
+      # it all. This flag is incompatible with /PROFILE
+      ldflags = [ "/DEBUG:FASTLINK" ]
+    } else {
+      ldflags = [ "/DEBUG" ]
+    }
+  } else {
+    # see: https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html#Debugging-Options
+    # http://clang.llvm.org/docs/UsersManual.html#cmdoption-ggdb
+    cflags = [ "-ggdb3" ]
+    asmflags = cflags
+    ldflags = []
+  }
+}
+
+# Minimal symbols.
+config("minimal_symbols") {
+  if (is_win) {
+    # Linker symbols for backtraces only.
+    cflags = []
+    if (is_win_fastlink && visual_studio_version != "2013") {
+      # Tell VS 2015+ to create a PDB that references debug
+      # information in .obj and .lib files instead of copying
+      # it all. This flag is incompatible with /PROFILE
+      ldflags = [ "/DEBUG:FASTLINK" ]
+    } else {
+      ldflags = [ "/DEBUG" ]
+    }
+  } else {
+    # see: https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html#Debugging-Options
+    # http://clang.llvm.org/docs/UsersManual.html#cmdoption-ggdb
+    cflags = [ "-ggdb1" ]
+    asmflags = cflags
+    ldflags = []
+  }
+}
+
+# No symbols.
+config("no_symbols") {
+  if (!is_win) {
+    cflags = [ "-g0" ]
+    asmflags = cflags
+  }
+}
+
+# Default symbols.
+config("default_symbols") {
+  if (symbol_level == 0) {
+    configs = [ ":no_symbols" ]
+  } else if (symbol_level == 1) {
+    configs = [ ":minimal_symbols" ]
+  } else if (symbol_level == 2) {
+    configs = [ ":symbols" ]
+  } else {
+    assert(false)
+  }
+}
+
+if (is_mac) {
+  # On Mac and iOS, this enables support for ARC (automatic ref-counting).
+  # See http://clang.llvm.org/docs/AutomaticReferenceCounting.html.
+  config("enable_arc") {
+    common_flags = [ "-fobjc-arc" ]
+    cflags_objc = common_flags
+    cflags_objcc = common_flags
+  }
+}
+
+# Debug/release ----------------------------------------------------------------
+
+config("debug") {
+  defines = [
+    "_DEBUG",
+  ]
+
+  if (is_win) {
+    if (!enable_iterator_debugging) {
+      # Iterator debugging is enabled by default by the compiler on debug
+      # builds, and we have to tell it to turn it off.
+      defines += [ "_HAS_ITERATOR_DEBUGGING=0" ]
+    }
+  } else if (is_posix && enable_iterator_debugging) {
+    # Enable libstdc++ debugging facilities to help catch problems early.
+    defines += [ "_GLIBCXX_DEBUG=1" ]
+  }
+}
+
+config("release") {
+  defines = [ "NDEBUG" ]
+}
+
+# Default libraries ------------------------------------------------------------
+
+# This config defines the default libraries applied to all targets.
+config("default_libs") {
+  if (is_win) {
+    libs = [
+      "kernel32.lib",
+    ]
+  } else if (is_mac) {
+    libs = [
+      "AppKit.framework",
+      "ApplicationServices.framework",
+      "Carbon.framework",
+      "CoreFoundation.framework",
+      "Foundation.framework",
+      "IOKit.framework",
+      "OpenGL.framework",
+      "Security.framework",
+    ]
+  } else if (is_linux) {
+    libs = [
+      "dl",
+      "rt",
+    ]
+  }
+}
+
+# Executable configs -----------------------------------------------------------
+
+# Windows linker setup for EXEs and DLLs.
+if (is_win) {
+  _windows_linker_configs = [
+    "//build/config/win:sdk_link",
+    "//build/config/win:common_linker_setup",
+  ]
+}
+
+# This config defines the configs applied to all executables.
+config("executable_config") {
+  configs = []
+
+  if (is_win) {
+    configs += _windows_linker_configs
+  } else if (is_mac) {
+    configs += [
+      "//build/config/mac:mac_dynamic_flags",
+      "//build/config/mac:mac_executable_flags",
+    ]
+  } else {
+    configs += [ "//build/config/posix:executable_ldconfig" ]
+  }
+}
+
+# Shared library configs -------------------------------------------------------
+
+# This config defines the configs applied to all shared libraries.
+config("shared_library_config") {
+  configs = []
+
+  if (is_win) {
+    configs += _windows_linker_configs
+  } else if (is_mac) {
+    configs += [ "//build/config/mac:mac_dynamic_flags" ]
+  }
+}

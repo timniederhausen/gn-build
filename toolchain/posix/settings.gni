@@ -1,0 +1,53 @@
+# TODO(tim): This isn't optimal yet
+declare_args() {
+  # Path of the GCC C compiler executable.
+  gcc_cc = "gcc"
+
+  # Path of the GCC C++ compiler executable.
+  gcc_cxx = "g++"
+
+  # Version of the GCC compiler.
+  # Format: MAJOR * 10000 + MINOR * 100 + PATCHLEVEL
+  gcc_version = 0
+
+  # Path of the Clang C compiler executable.
+  clang_cc = "clang"
+
+  # Path of the Clang C++ compiler executable.
+  clang_cxx = "clang++"
+
+  # Version of the Clang compiler.
+  # Format: MAJOR * 10000 + MINOR * 100 + PATCHLEVEL
+  clang_version = 0
+
+  # Path of the 'readelf' utility.
+  readelf = "readelf"
+
+  # Path of the 'ar' utility.
+  ar = "ar"
+
+  # Path of the 'nm' utility.
+  nm = "nm"
+}
+
+#
+# If the user didn't specify the compiler version, attempt to autodetect it.
+#
+
+if (gcc_version == 0 && !is_clang) {
+  gcc_version = exec_script("toolchain.py",
+                            [
+                              "get_gcc_version",
+                              gcc_cc,
+                            ],
+                            "trim value")
+}
+
+if (clang_version == 0 && is_clang) {
+  clang_version = exec_script("toolchain.py",
+                            [
+                              "get_clang_version",
+                              clang_cc,
+                            ],
+                            "trim value")
+}

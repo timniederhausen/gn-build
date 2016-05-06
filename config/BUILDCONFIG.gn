@@ -1,0 +1,336 @@
+# Copyright (c) 2013 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# =============================================================================
+# PLATFORM SELECTION
+# =============================================================================
+#
+# There are two main things to set: "os" and "cpu". The "toolchain" is the name
+# of the GN thing that encodes combinations of these things.
+#
+# Users typically only set the variables "target_os" and "target_cpu" in "gn
+# args", the rest are set up by our build and internal to GN.
+#
+# There are three different types of each of these things: The "host"
+# represents the computer doing the compile and never changes. The "target"
+# represents the main thing we're trying to build. The "current" represents
+# which configuration is currently being defined, which can be either the
+# host, the target, or something completely different (like nacl). GN will
+# run the same build file multiple times for the different required
+# configuration in the same build.
+#
+# This gives the following variables:
+#  - host_os, host_cpu, host_toolchain
+#  - target_os, target_cpu, default_toolchain
+#  - current_os, current_cpu, current_toolchain.
+#
+# Note the default_toolchain isn't symmetrical (you would expect
+# target_toolchain). This is because the "default" toolchain is a GN built-in
+# concept, and "target" is something our build sets up that's symmetrical with
+# its GYP counterpart. Potentially the built-in default_toolchain variable
+# could be renamed in the future.
+#
+# When writing build files, to do something only for the host:
+#   if (current_toolchain == host_toolchain) { ...
+
+if (target_os == "") {
+  target_os = host_os
+}
+
+if (target_cpu == "") {
+  target_cpu = host_cpu
+}
+
+if (current_cpu == "") {
+  current_cpu = target_cpu
+}
+if (current_os == "") {
+  current_os = target_os
+}
+
+# =============================================================================
+# BUILD FLAGS
+# =============================================================================
+#
+# This block lists input arguments to the build, along with their default
+# values.
+#
+# If a value is specified on the command line, it will overwrite the defaults
+# given in a declare_args block, otherwise the default will be used.
+#
+# YOU SHOULD ALMOST NEVER NEED TO ADD FLAGS TO THIS FILE. GN allows any file in
+# the build to declare build flags. If you need a flag for a single component,
+# you can just declare it in the corresponding BUILD.gn file. If you need a
+# flag in multiple components, there are a few options:
+#
+# - If your feature is a single target, say //components/foo, and the targets
+#   depending on foo need to have some define set if foo is enabled: (1) Write
+#   a declare_args block in foo's BUILD.gn file listing your enable_foo build
+#   flag. (2) Write a config in that file listing the define, and list that
+#   config in foo's public_configs. This will propagate that define to all the
+#   targets depending on foo. (3) When foo is not enabled, just make it expand
+#   to an empty group (or whatever's appropriate for the "off" state of your
+#   feature.
+#
+# - If a semi-random set of targets need to know about a define: (1) In the
+#   lowest level of the build that knows about this feature, add a declare_args
+#   block in the build file for your enable flag. (2) Write a config that adds
+#   a define conditionally based on that build flags. (3) Manually add that
+#   config to the "configs" applying to the targets that need the define.
+#
+# - If a semi-random set of targets need to know about the build flag (to do
+#   file inclusion or exclusion, more than just defines): (1) Write a .gni file
+#   in the lowest-level directory that knows about the feature. (2) Put the
+#   declare_args block with your build flag in that .gni file. (3) Import that
+#   .gni file from the BUILD.gn files that need the flag.
+#
+# Other advice:
+#
+# - Use boolean values when possible. If you need a default value that expands
+#   to some complex thing in the default case (like the location of the
+#   compiler which would be computed by a script), use a default value of -1 or
+#   the empty string. Outside of the declare_args block, conditionally expand
+#   the default value as necessary.
+#
+# - Use a name like "use_foo" or "is_foo" (whatever is more appropriate for
+#   your feature) rather than just "foo".
+#
+# - Write good comments directly above the declaration with no blank line.
+#   These comments will appear as documentation in "gn args --list".
+#
+# - Don't call exec_script inside declare_args. This will execute the script
+#   even if the value is overridden, which is wasteful. See first bullet.
+
+declare_args() {
+  # Debug build.
+  is_debug = true
+
+  # Set to true when compiling with the Clang compiler. Typically this is used
+  # to configure warnings.
+  is_clang = false
+
+  # Allows the path to a custom target toolchain to be injected as a single
+  # argument, and set as the default toolchain.
+  custom_toolchain = ""
+
+  # This should not normally be set as a build argument.  It's here so that
+  # every toolchain can pass through the "global" value via toolchain_args().
+  host_toolchain = ""
+
+  # DON'T ADD MORE FLAGS HERE. Read the comment above.
+}
+
+# ==============================================================================
+# TOOLCHAIN SETUP
+# ==============================================================================
+#
+# Here we set the default toolchain, as well as the variable host_toolchain
+# which will identify the toolchain corresponding to the local system when
+# doing cross-compiles. When not cross-compiling, this will be the same as the
+# default toolchain.
+#
+# We do this before anything else to make sure we complain about any
+# unsupported os/cpu combinations as early as possible.
+
+if (host_toolchain == "") {
+  # This should only happen in the top-level context.
+  # In a specific toolchain context, the toolchain_args()
+  # block should have propagated a value down.
+  # TODO(dpranke): Add some sort of assert here that verifies that
+  # no toolchain omitted host_toolchain from its toolchain_args().
+
+  if (host_os == "mac") {
+    host_toolchain = "//build/toolchain/mac:clang_$host_cpu"
+  } else if (host_os == "win") {
+    # TODO(crbug.com/467159): win cross-compiles don't actually work yet, so
+    # use the target_cpu instead of the host_cpu.
+    if (is_clang) {
+      host_toolchain = "//build/toolchain/win:clang_$target_cpu"
+    } else {
+      host_toolchain = "//build/toolchain/win:$target_cpu"
+    }
+  } else {
+    if (target_os != host_os) {
+      # TODO(dpranke) - is_clang normally applies only to the target
+      # build, and there is no way to indicate that you want to override
+      # it for both the target build *and* the host build. Do we need to
+      # support this?
+      host_toolchain = "//build/toolchain/posix:clang_$host_cpu"
+    } else if (is_clang) {
+      host_toolchain = "//build/toolchain/posix:clang_$host_cpu"
+    } else {
+      host_toolchain = "//build/toolchain/posix:$host_cpu"
+    }
+  }
+}
+
+_default_toolchain = ""
+
+if (target_os == "mac") {
+  assert(host_os == "mac", "Mac cross-compiles are unsupported.")
+  _default_toolchain = host_toolchain
+} else if (target_os == "win") {
+  # On Windows we use the same toolchain for host and target by default.
+  assert(target_os == host_os, "Win cross-compiles only work on win hosts.")
+  if (is_clang) {
+    _default_toolchain = "//build/toolchain/win:clang_$target_cpu"
+  } else {
+    _default_toolchain = "//build/toolchain/win:$target_cpu"
+  }
+} else if (target_os == "winrt_81" || target_os == "winrt_81_phone" ||
+           target_os == "winrt_10") {
+  _default_toolchain = "//build/toolchain/win:winrt_$target_cpu"
+} else {
+  if (is_clang) {
+    _default_toolchain = "//build/toolchain/posix:clang_$target_cpu"
+  } else {
+    _default_toolchain = "//build/toolchain/posix:$target_cpu"
+  }
+}
+
+# If a custom toolchain has been set in the args, set it as default. Otherwise,
+# set the default toolchain for the platform (if any).
+if (custom_toolchain != "") {
+  set_default_toolchain(custom_toolchain)
+} else if (_default_toolchain != "") {
+  set_default_toolchain(_default_toolchain)
+}
+
+# =============================================================================
+# OS DEFINITIONS
+# =============================================================================
+#
+# We set these various is_FOO booleans for convenience in writing OS-based
+# conditions.
+#
+# - is_linux, is_mac, is_freebsd, and is_win should be obvious.
+# - is_posix is true for mac and any Unix-like system (basically everything
+#   except Windows).
+
+if (current_os == "win" || current_os == "winrt_81" ||
+    current_os == "winrt_81_phone" || current_os == "winrt_10") {
+  is_linux = false
+  is_mac = false
+  is_posix = false
+  is_win = true
+  is_freebsd = false
+} else if (current_os == "mac") {
+  is_linux = false
+  is_mac = true
+  is_posix = true
+  is_win = false
+  is_freebsd = false
+} else if (current_os == "linux") {
+  is_linux = true
+  is_mac = false
+  is_posix = true
+  is_win = false
+  is_freebsd = false
+} else if (current_os == "freebsd") {
+  is_linux = false
+  is_mac = false
+  is_posix = true
+  is_win = false
+  is_freebsd = true
+}
+
+# =============================================================================
+# TARGET DEFAULTS
+# =============================================================================
+#
+# Set up the default configuration for every build target of the given type.
+# The values configured here will be automatically set on the scope of the
+# corresponding target. Target definitions can add or remove to the settings
+# here as needed.
+
+# Holds all configs used for making native executables and libraries, to avoid
+# duplication in each target below.
+_native_compiler_configs = [
+  "//build/config:compiler",
+  "//build/config:stackrealign",
+  "//build/config:compiler_arm_fpu",
+  "//build/config:default_warnings",
+  "//build/config:default_optimization",
+  "//build/config:default_symbols",
+  "//build/config:clang_warnings",
+  "//build/config:rtti",
+  "//build/config:exceptions",
+  "//build/config:runtime_library",
+  "//build/config:symbol_visibility_hidden",
+  "//build/config/sanitizers:default_sanitizer_flags",
+  "//build/config/sanitizers:default_sanitizer_coverage_flags",
+]
+if (is_win) {
+  _native_compiler_configs += [
+    "//build/config/win:winver",
+    "//build/config/win:vs_code_analysis",
+  ]
+}
+if (current_os == "winrt_81" || current_os == "winrt_81_phone" ||
+    current_os == "winrt_10") {
+  _native_compiler_configs += [ "//build/config/win:target_winrt" ]
+}
+if (is_clang) {
+  _native_compiler_configs += []
+}
+
+# Debug/release-related defines.
+if (is_debug) {
+  _native_compiler_configs += [ "//build/config:debug" ]
+} else {
+  _native_compiler_configs += [ "//build/config:release" ]
+}
+
+if (is_win) {
+  # Many targets remove these configs, so they are not contained within
+  # //build/config:executable_config for easy removal.
+  _windows_linker_configs = [
+    # Default to console-mode apps. Most of our targets are tests and such
+    # that shouldn't use the windows subsystem.
+    "//build/config/win:console",
+  ]
+}
+
+# Executable defaults.
+_executable_configs = _native_compiler_configs + [
+                        "//build/config:default_libs",
+                        "//build/config:executable_config",
+                      ]
+if (is_win) {
+  _executable_configs += _windows_linker_configs
+}
+set_defaults("executable") {
+  configs = _executable_configs
+}
+
+# Static library defaults.
+set_defaults("static_library") {
+  configs = _native_compiler_configs
+}
+
+# Shared library and loadable module defaults (also for components in component
+# mode).
+_shared_library_configs = _native_compiler_configs + [
+                            "//build/config:default_libs",
+                            "//build/config:shared_library_config",
+                          ]
+if (is_win) {
+  _shared_library_configs += _windows_linker_configs
+}
+set_defaults("shared_library") {
+  configs = _shared_library_configs
+}
+set_defaults("loadable_module") {
+  configs = _shared_library_configs
+}
+
+# Source set defaults (also for components in non-component mode).
+set_defaults("source_set") {
+  configs = _native_compiler_configs
+}
+
+# Test defaults.
+set_defaults("test") {
+  configs = _executable_configs
+}
