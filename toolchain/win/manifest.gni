@@ -73,7 +73,7 @@ if (is_win) {
     action(manifest_action_name) {
       visibility = [ ":$source_set_name" ]
 
-      script = "//build/toolchain/manifest_wrapper.py"
+      script = "//build/toolchain/win/manifest_wrapper.py"
 
       assert(defined(invoker.sources),
              "\"sources\" must be defined for a windows_manifest target")
@@ -106,7 +106,7 @@ if (is_win) {
     action(rc_action_name) {
       visibility = [ ":$source_set_name" ]
 
-      script = "$root_build_dir/gyp-win-tool"
+      script = "//build/toolchain/win/manifest_to_rc.py"
 
       outputs = [
         rcfile,
@@ -124,8 +124,6 @@ if (is_win) {
       }
 
       args = [
-        "manifest-to-rc",
-        "$_environment_file",
         rebase_path(output_manifest),
         rebase_path(rcfile, root_build_dir),
         manifest_resource_id,
