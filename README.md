@@ -22,7 +22,7 @@ The toolchains have been tested on the following platforms:
 * `visual_studio_version` (default: 2013): The MSVC version to use.
 * `visual_studio_path` (default: auto-detected): The path of your MSVC installation.
   Autodetected based on `visual_studio_version`.
-* `windows_sdk_path` (default: C:\\Program Files (x86)\\Microsoft SDKs\\Windows\\v7.1A):
+* `windows_sdk_path` (default: auto-detected):
   Path of your Windows SDK installation.
 * `win_clang_prefix` (default: ""): If `is_clang` is true, this is required to point to
   the directory containing the `clang-cl` executable.

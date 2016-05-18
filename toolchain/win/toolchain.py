@@ -47,6 +47,7 @@ def _ExtractImportantEnvironment(output_of_set):
       'systemroot',
       'temp',
       'tmp',
+      'windowssdkdir',
       )
   env = {}
   # This occasionally happens and leads to misleading SYSTEMROOT error messages
@@ -158,9 +159,12 @@ def SetupToolchain(vs_path):
   cpus = ('x86', 'x64')
 
   bin_dirs = {}
+  windows_sdk_paths = {}
   for cpu in cpus:
     # Extract environment variables for subprocesses.
     env = _LoadToolchainEnv(vs_path, cpu)
+
+    windows_sdk_paths[cpu] = os.path.realpath(env['WINDOWSSDKDIR'])
 
     for path in env['PATH'].split(os.pathsep):
       if os.path.exists(os.path.join(path, 'cl.exe')):
@@ -180,8 +184,13 @@ def SetupToolchain(vs_path):
     with open('environment.winrt_' + cpu, 'wb') as f:
         f.write(env_block)
 
+  if len(set(windows_sdk_paths.values())) != 1:
+    raise Exception("WINDOWSSDKDIR is different for x86/x64")
+
   print '''x86_bin_dir = "%s"
-x64_bin_dir = "%s"''' % (bin_dirs['x86'], bin_dirs['x64'])
+x64_bin_dir = "%s"
+windows_sdk_path = "%s"''' % (
+  bin_dirs['x86'], bin_dirs['x64'], windows_sdk_paths['x86'])
 
 def main():
   commands = {
