@@ -93,11 +93,16 @@ def _LoadToolchainEnv(vs_path, cpu):
   # 'x86' or 'x64'.
   assert cpu in ('x86', 'x64')
 
+  script_path = os.path.join(vs_path, 'VC', 'vcvarsall.bat')
+  if not os.path.exists(script_path):
+    raise Exception('%s doesn\'t exist. Does your VS have C++ support?' %
+                    script_path)
+
   # We only support x64-hosted tools.
-  args = [os.path.normpath(os.path.join(vs_path,
-                                        'VC/vcvarsall.bat')),
-          'amd64_x86' if cpu == 'x86' else 'amd64']
-  variables = _LoadEnvFromBat(args)
+  # TODO(tim): change that?
+  arch_name = 'amd64_x86' if cpu == 'x86' else 'amd64'
+
+  variables = _LoadEnvFromBat([script_path, arch_name])
   return _ExtractImportantEnvironment(variables)
 
 
