@@ -192,8 +192,6 @@ template("gcc_toolchain") {
     }
 
     tool("alink") {
-      arflags = ""
-
       # This needs a Python script to avoid using simple sh features in this
       # command, in case the host does not use a POSIX shell (e.g. compiling
       # POSIX-like toolchains such as NaCl on Windows).
@@ -204,9 +202,9 @@ template("gcc_toolchain") {
       if (!is_freebsd || nm != "nm") {
         rspfile = "{{output}}.rsp"
         rspfile_content = "{{inputs}}"
-        command = "$python_path \"$ar_wrapper\" --output={{output}} --ar=\"$ar\" $arflags rcsD @\"$rspfile\""
+        command = "$python_path \"$ar_wrapper\" --output={{output}} --ar=\"$ar\" {{arflags}} rcsD @\"$rspfile\""
       } else {
-        command = "$python_path \"$ar_wrapper\" --output={{output}} --ar=\"$ar\" $arflags rcsD {{inputs}}"
+        command = "$python_path \"$ar_wrapper\" --output={{output}} --ar=\"$ar\" {{arflags}} rcsD {{inputs}}"
       }
 
       description = "AR {{output}}"
