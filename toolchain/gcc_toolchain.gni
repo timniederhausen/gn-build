@@ -371,12 +371,15 @@ template("gcc_toolchain") {
       target_os = target_os
       target_cpu = target_cpu
 
-      forward_variables_from(invoker,
-                             [
-                               "is_clang",
-                               "use_gold",
-                               "symbol_level",
-                             ])
+      if (defined(invoker.is_clang)) {
+        is_clang = invoker.is_clang
+      }
+      if (defined(invoker.use_gold)) {
+        use_gold = invoker.use_gold
+      }
+      if (defined(invoker.symbol_level)) {
+        symbol_level = invoker.symbol_level
+      }
 
       if (defined(invoker.clear_sanitizers) && invoker.clear_sanitizers) {
         is_asan = false

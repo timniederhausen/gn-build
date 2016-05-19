@@ -208,10 +208,12 @@ template("msvc_toolchain") {
         current_os = invoker.toolchain_os
       }
 
-      forward_variables_from(invoker,
-                             [
-                               "is_clang",
-                             ])
+      # These share a name with global variables that are already defined, and
+      # forward_variables_from won't clobber the existing value, so we need to
+      # set it explicitly.
+      if (defined(invoker.is_clang)) {
+        is_clang = invoker.is_clang
+      }
 
       # This value needs to be passed through unchanged.
       host_toolchain = host_toolchain
