@@ -41,3 +41,10 @@ The toolchains have been tested on the following platforms:
 ### Mac toolchain
 
 TODO: Mac builds are currently unsupported.
+
+## Recommended workflow
+
+Fork this repo and add it as a submodule/`DEPS`-entry to your project.
+This way you can modify every part of the `//build` directory while still being
+able to easily merge upstream changes (e.g. support for new GN features that
+you don't want to implement yourself.)
