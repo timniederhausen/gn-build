@@ -836,8 +836,8 @@ config("default_optimization") {
 # You can override the symbol level on a per-target basis by removing the
 # default config and then adding the named one you want:
 #
-#   configs -= [ "//build/config/compiler:default_symbols" ]
-#   configs += [ "//build/config/compiler:symbols" ]
+#   configs -= [ "//build/config:default_symbols" ]
+#   configs += [ "//build/config:symbols" ]
 
 # Full symbols.
 config("symbols") {
@@ -960,44 +960,5 @@ config("default_libs") {
       "dl",
       "rt",
     ]
-  }
-}
-
-# Executable configs -----------------------------------------------------------
-
-# Windows linker setup for EXEs and DLLs.
-if (is_win) {
-  _windows_linker_configs = [
-    "//build/config/win:sdk_link",
-    "//build/config/win:common_linker_setup",
-  ]
-}
-
-# This config defines the configs applied to all executables.
-config("executable_config") {
-  configs = []
-
-  if (is_win) {
-    configs += _windows_linker_configs
-  } else if (is_mac) {
-    configs += [
-      "//build/config/mac:mac_dynamic_flags",
-      "//build/config/mac:mac_executable_flags",
-    ]
-  } else {
-    configs += [ "//build/config/posix:executable_ldconfig" ]
-  }
-}
-
-# Shared library configs -------------------------------------------------------
-
-# This config defines the configs applied to all shared libraries.
-config("shared_library_config") {
-  configs = []
-
-  if (is_win) {
-    configs += _windows_linker_configs
-  } else if (is_mac) {
-    configs += [ "//build/config/mac:mac_dynamic_flags" ]
   }
 }
