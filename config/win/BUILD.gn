@@ -62,8 +62,7 @@ config("compiler") {
   }
 
   # Building with Clang on Windows is a work in progress and very
-  # experimental. See crbug.com/82385.
-  # Keep this in sync with the similar block in build/common.gypi
+  # experimental.
   if (is_clang) {
     if (visual_studio_version == "2013") {
       cflags += [ "-fmsc-version=1800" ]

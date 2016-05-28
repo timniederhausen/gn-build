@@ -605,8 +605,11 @@ config("clang_warnings") {
 config("rtti") {
   if (is_win) {
     cflags_cc = [ "/GR" ]
+  } else {
+    cflags_cc = [ "-frtti" ]
   }
 }
+
 config("no_rtti") {
   # CFI diagnostics and UBsan vptr require RTTI.
   if (!use_cfi_diag && !is_ubsan_vptr) {
@@ -626,6 +629,8 @@ config("no_rtti") {
 config("exceptions") {
   if (is_win && !is_clang) {
     cflags_cc = [ "/EHsc" ]
+  } else {
+    cflags_cc = [ "-fexceptions" ]
   }
 }
 
