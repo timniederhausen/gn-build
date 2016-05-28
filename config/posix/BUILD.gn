@@ -9,7 +9,7 @@ config("compiler") {
 
   if (is_freebsd && is_clang) {
     # GCC seems to include /usr/local/include in its default include dirs.
-    include_dirs = [ "/usr/local/include" ]
+    cflags += [ "-isystem/usr/local/include" ]
     ldflags += [ "-B/usr/local/bin" ]
   }
 }
