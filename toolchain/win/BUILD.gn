@@ -69,7 +69,8 @@ template("msvc_toolchain") {
     tool("rc") {
       rc_wrapper =
           rebase_path("//build/toolchain/win/rc_wrapper.py", root_build_dir)
-      command = "$python_path $rc_wrapper $env rc.exe {{defines}} {{include_dirs}} /fo{{output}} {{source}}"
+      command = "$python_path $rc_wrapper $env {{source}} {{output}} rc.exe {{defines}} {{include_dirs}}"
+      depsformat = "msvc"
       outputs = [
         "$object_subdir/{{source_name_part}}.res",
       ]
