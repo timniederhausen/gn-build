@@ -701,11 +701,6 @@ if (is_win) {
   common_optimize_on_ldflags = [
     "/OPT:ICF", # Redundant COMDAT folding.
     "/OPT:REF",  # Remove unreferenced data.
-    "/LTCG",  # Link-time code generation.
-
-    # Set the number of LTCG code-gen threads to eight. The default is four.
-    # This gives a 5-10% link speedup.
-    "/cgthreads:8",
   ]
 } else {
   common_optimize_on_cflags = [
@@ -818,6 +813,16 @@ config("optimize_max") {
       # value of C4702 for PGO builds is likely very small.
       "/wd4702",
     ]
+
+    ldflags += [
+      "/LTCG",  # Link-time code generation.
+
+      # Set the number of LTCG code-gen threads to eight. The default is four.
+      # This gives a 5-10% link speedup.
+      "/cgthreads:8",
+    ]
+
+    arflags = [ "/LTCG" ]
   } else {
     cflags = [ "-O3" ] + common_optimize_on_cflags
   }
@@ -861,7 +866,6 @@ config("symbols") {
     # http://clang.llvm.org/docs/UsersManual.html#cmdoption-ggdb
     cflags = [ "-ggdb3" ]
     asmflags = cflags
-    ldflags = []
   }
 }
 
@@ -883,7 +887,6 @@ config("minimal_symbols") {
     # http://clang.llvm.org/docs/UsersManual.html#cmdoption-ggdb
     cflags = [ "-ggdb1" ]
     asmflags = cflags
-    ldflags = []
   }
 }
 
