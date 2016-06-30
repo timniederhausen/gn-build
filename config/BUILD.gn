@@ -627,7 +627,7 @@ config("no_rtti") {
 # Allows turning Run-Time Type Identification on or off.
 
 config("exceptions") {
-  if (is_win && !is_clang) {
+  if (is_win) {
     cflags_cc = [ "/EHsc" ]
   } else {
     cflags_cc = [ "-fexceptions" ]
