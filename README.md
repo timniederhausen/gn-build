@@ -16,6 +16,8 @@ The toolchains have been tested on the following platforms:
 
 * `is_debug` (default: true): Enable/disable debugging options.
 * `is_clang` (default: false): Favor Clang over the platform default (GCC/MSVC).
+* `use_lld` (default: false): Use the new LLD linker.
+  This requires `is_clang` to be true.
 
 ### Windows toolchain
 
@@ -24,17 +26,21 @@ The toolchains have been tested on the following platforms:
   Autodetected based on `visual_studio_version`.
 * `windows_sdk_path` (default: auto-detected):
   Path of your Windows SDK installation.
-* `win_clang_prefix` (default: ""): If `is_clang` is true, this is required to point to
-  the directory containing the `clang-cl` executable.
+* `win_clang_prefix` (default: ""): If `is_clang` is true, this is required to
+  point to the directory containing the `clang-cl` executable.
 
 ### POSIX toolchain
 
-* `gcc_cc` (default: gcc): Path of the GCC C compiler executable. Does not have to be absolute.
-* `gcc_cxx` (default: g++): Path of the GCC C++ compiler executable. Does not have to be absolute.
+* `gcc_cc` (default: gcc): Path of the GCC C compiler executable.
+  Does not have to be absolute.
+* `gcc_cxx` (default: g++): Path of the GCC C++ compiler executable.
+  Does not have to be absolute.
 * `gcc_version` (default: auto-detected): Version of the GCC compiler.
   Format: `major` * 10000 + `minor` * 100 + `patchlevel`
-* `clang_cc` (default: gcc): Path of the Clang C compiler executable. Does not have to be absolute.
-* `clang_cxx` (default: g++): Path of the Clang C++ compiler executable. Does not have to be absolute.
+* `clang_cc` (default: gcc): Path of the Clang C compiler executable.
+  Does not have to be absolute.
+* `clang_cxx` (default: g++): Path of the Clang C++ compiler executable.
+  Does not have to be absolute.
 * `clang_version` (default: auto-detected): Version of the Clang compiler.
   Format: `major` * 10000 + `minor` * 100 + `patchlevel`
 

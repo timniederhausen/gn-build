@@ -38,6 +38,25 @@ template("msvc_toolchain") {
     cl = invoker.cl
   }
 
+  if (use_lld) {
+    if (host_os == "win") {
+      lld_link = "lld-link.exe"
+    } else {
+      lld_link = "lld-link"
+    }
+
+    # lld-link includes a replacement for lib.exe that can produce thin
+    # archives and understands bitcode (for lto builds).
+    #
+    # Quote the path so we can support standard LLVM installations
+    # (which have spaces in their path).
+    lib = "\"$win_clang_prefix/$lld_link\" /lib /llvmlibthin"
+    link = "\"$win_clang_prefix/$lld_link\""
+  } else {
+    lib = "lib.exe"
+    link = "link.exe"
+  }
+
   toolchain(target_name) {
     # Make these apply to all tools below.
     lib_switch = ""
@@ -111,7 +130,7 @@ template("msvc_toolchain") {
 
       link_wrapper =
           rebase_path("//build/toolchain/win/link_wrapper.py", root_build_dir)
-      command = "$python_path $link_wrapper $env False lib.exe /nologo {{arflags}} /OUT:{{output}} @$rspfile"
+      command = "$python_path $link_wrapper $env False $lib /nologo {{arflags}} /OUT:{{output}} @$rspfile"
       description = "LIB {{output}}"
       outputs = [
         # Ignore {{output_extension}} and always use .lib, there's no reason to
@@ -134,7 +153,7 @@ template("msvc_toolchain") {
       link_wrapper =
           rebase_path("//build/toolchain/win/link_wrapper.py", root_build_dir)
 
-      command = "$python_path $link_wrapper $env False link.exe /nologo /IMPLIB:$libname /DLL /OUT:$dllname /PDB:${dllname}.pdb @$rspfile"
+      command = "$python_path $link_wrapper $env False $link /nologo /IMPLIB:$libname /DLL /OUT:$dllname /PDB:${dllname}.pdb @$rspfile"
 
       default_output_extension = ".dll"
       default_output_dir = "{{root_out_dir}}"
@@ -164,7 +183,7 @@ template("msvc_toolchain") {
       link_wrapper =
           rebase_path("//build/toolchain/win/link_wrapper.py", root_build_dir)
 
-      command = "$python_path $link_wrapper $env False link.exe /nologo /DLL /OUT:$dllname /PDB:${dllname}.pdb @$rspfile"
+      command = "$python_path $link_wrapper $env False $link /nologo /DLL /OUT:$dllname /PDB:${dllname}.pdb @$rspfile"
 
       default_output_extension = ".dll"
       default_output_dir = "{{root_out_dir}}"
@@ -184,7 +203,7 @@ template("msvc_toolchain") {
       link_wrapper =
           rebase_path("//build/toolchain/win/link_wrapper.py", root_build_dir)
 
-      command = "$python_path $link_wrapper $env False link.exe /nologo /OUT:{{output}} /PDB:{{output}}.pdb @$rspfile"
+      command = "$python_path $link_wrapper $env False $link /nologo /OUT:{{output}} /PDB:{{output}}.pdb @$rspfile"
 
       default_output_extension = ".exe"
       default_output_dir = "{{root_out_dir}}"

@@ -5,6 +5,11 @@
 # Toolchain-related configuration that may be needed outside the context of the
 # toolchain() rules themselves.
 
+declare_args() {
+  # Set to true to use lld, the LLVM linker.
+  use_lld = false
+}
+
 # Extension for shared library files (including leading dot).
 if (is_mac) {
   shlib_extension = ".dylib"
