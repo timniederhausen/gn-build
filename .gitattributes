@@ -1,0 +1,7 @@
+* text=auto
+
+*.py text
+*.gn text
+*.gni text
+
+*.sh text eol=lf
