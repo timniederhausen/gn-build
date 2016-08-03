@@ -9,14 +9,6 @@ import("//build/toolchain/toolchain.gni")
 # Should only be running on Windows.
 assert(is_win)
 
-# This value will be inherited in the toolchain below.
-if (is_lto) {
-  concurrent_links =
-      exec_script("../get_concurrent_links.py", [ "--lto" ], "value")
-} else {
-  concurrent_links = exec_script("../get_concurrent_links.py", [], "value")
-}
-
 # Parameters:
 #  toolchain_cpu: current_cpu to pass as a build arg
 #  toolchain_os: current_os to pass as a build arg
