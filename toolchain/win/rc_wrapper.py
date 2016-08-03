@@ -15,7 +15,8 @@ def get_env(arch):
   return dict(kvs)
 
 def call(*popenargs, **kwargs):
-  process = subprocess.Popen(stdout=subprocess.PIPE, *popenargs, **kwargs)
+  process = subprocess.Popen(stdout=subprocess.PIPE, universal_newlines=True,
+                             *popenargs, **kwargs)
   output, unused_err = process.communicate()
   return process.poll(), output
 
@@ -34,7 +35,7 @@ def main(arch, source, output, rc_name, *args):
 
     return '/I{}'.format(os.path.relpath(arg[2:], output_dir))
 
-  cl_args = map(fix_dirs, args)
+  cl_args = list(map(fix_dirs, args))
 
   # This needs shell=True to search the path in env for the cl executable.
   retcode, out = call(["cl.exe", "/nologo", "/showIncludes", "/wd4005"] +
@@ -51,13 +52,13 @@ def main(arch, source, output, rc_name, *args):
   # Now we need to fix the relative paths of our included files
   for line in out.splitlines():
     if not line.startswith(msvc_deps_prefix):
-      print line
+      print(line)
       continue
 
     filename = line[len(msvc_deps_prefix):].strip()
     filename = os.path.normpath(os.path.join(output_dir, filename))
 
-    print '{}{}'.format(msvc_deps_prefix, filename)
+    print('{}{}'.format(msvc_deps_prefix, filename))
 
   retcode, out = call([rc_name] + args + ["/fo" + output, source],
                       shell=True, env=env, stderr=subprocess.STDOUT)
@@ -65,7 +66,7 @@ def main(arch, source, output, rc_name, *args):
     if (not line.startswith('Microsoft (R) Windows (R) Resource Compiler') and
         not line.startswith('Copyright (C) Microsoft Corporation') and
         line):
-      print line
+      print(line)
   return retcode
 
 if __name__ == '__main__':

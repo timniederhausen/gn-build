@@ -25,7 +25,7 @@ def main(arch, outdir, tlb, h, dlldata, iid, proxy, idl, *flags):
       '/proxy', proxy,
       idl]
   env = GetEnv(arch)
-  popen = subprocess.Popen(args, shell=True, env=env,
+  popen = subprocess.Popen(args, shell=True, env=env, universal_newlines=True,
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   out, _ = popen.communicate()
   # Filter junk out of stdout, and write filtered versions. Output we want
@@ -38,7 +38,7 @@ def main(arch, outdir, tlb, h, dlldata, iid, proxy, idl, *flags):
                    for x in lines if x.startswith(prefixes))
   for line in lines:
     if not line.startswith(prefixes) and line not in processing:
-      print line
+      print(line)
   return popen.returncode
 
 if __name__ == '__main__':

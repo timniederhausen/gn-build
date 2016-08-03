@@ -18,7 +18,10 @@ def _RegistryGetValueUsingWinReg(key, value):
     contents of the registry key's value, or None on failure.  Throws
     ImportError if _winreg is unavailable.
   """
-  import _winreg
+  try:
+    import _winreg
+  except ImportError:
+    import winreg as _winreg
   try:
     root, subkey = key.split('\\', 1)
     assert root == 'HKLM'  # Only need HKLM for now.
@@ -77,8 +80,8 @@ def _LoadEnvFromBat(args):
   """Given a bat command, runs it and returns env vars set by it."""
   args = args[:]
   args.extend(('&&', 'set'))
-  popen = subprocess.Popen(
-      args, shell=True, stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+  popen = subprocess.Popen(args, shell=True, universal_newlines=True,
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   variables, _ = popen.communicate()
   if popen.returncode != 0:
     raise Exception('"%s" failed with error %d' % (args, popen.returncode))
@@ -110,10 +113,11 @@ def _FormatAsEnvironmentBlock(envvar_dict):
   """Format as an 'environment block' directly suitable for CreateProcess.
   Briefly this is a list of key=value\0, terminated by an additional \0. See
   CreateProcess documentation for more details."""
-  block = ''
-  nul = '\0'
-  for key, value in envvar_dict.iteritems():
-    block += key + '=' + value + nul
+  encoding = sys.getfilesystemencoding()
+  block = b''
+  nul = b'\0'
+  for key, value in envvar_dict.items():
+    block += key.encode(encoding) + b'=' + value.encode(encoding) + nul
   block += nul
   return block
 
@@ -157,7 +161,7 @@ def YearToVersionNumber(version_as_year):
 
 def GetVsPath(version_as_year):
   """Gets location information about the current toolchain. This is used for the GN build."""
-  print DetectVisualStudioPath(version_as_year)
+  print(DetectVisualStudioPath(version_as_year))
 
 
 def SetupToolchain(vs_path):
@@ -192,10 +196,10 @@ def SetupToolchain(vs_path):
   if len(set(windows_sdk_paths.values())) != 1:
     raise Exception("WINDOWSSDKDIR is different for x86/x64")
 
-  print '''x86_bin_dir = "%s"
+  print('''x86_bin_dir = "%s"
 x64_bin_dir = "%s"
 windows_sdk_path = "%s"''' % (
-  bin_dirs['x86'], bin_dirs['x64'], windows_sdk_paths['x86'])
+  bin_dirs['x86'], bin_dirs['x64'], windows_sdk_paths['x86']))
 
 def main():
   commands = {
@@ -203,7 +207,7 @@ def main():
       'setup_toolchain': SetupToolchain,
   }
   if len(sys.argv) < 2 or sys.argv[1] not in commands:
-    print >>sys.stderr, 'Expected one of: %s' % ', '.join(commands)
+    sys.stderr.write('Expected one of: %s\n' % ', '.join(commands))
     return 1
   return commands[sys.argv[1]](*sys.argv[2:])
 

@@ -22,7 +22,7 @@ try:
   subprocess.check_output(["mc.exe"] + sys.argv[2:],
                           env=env_dict,
                           stderr=subprocess.STDOUT,
-                          shell=True)
+                          shell=True, universal_newlines=True)
 except subprocess.CalledProcessError as e:
   print e.output
   sys.exit(e.returncode)

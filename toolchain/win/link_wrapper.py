@@ -56,11 +56,12 @@ def main(arch, use_separate_mspdbsrv, *args):
                           shell=True,
                           env=env,
                           stdout=subprocess.PIPE,
-                          stderr=subprocess.STDOUT)
+                          stderr=subprocess.STDOUT,
+                          universal_newlines=True)
   out, _ = link.communicate()
   for line in out.splitlines():
     if not line.startswith('   Creating library '):
-      print line
+      print(line)
   return link.returncode
 
 if __name__ == '__main__':

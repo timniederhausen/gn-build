@@ -16,12 +16,12 @@ def main(arch, *args):
   (some XML blocks are recognized by the OS loader, but not the manifest
   tool)."""
   env = GetEnv(arch)
-  popen = subprocess.Popen(args, shell=True, env=env,
+  popen = subprocess.Popen(args, shell=True, env=env, universal_newlines=True,
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   out, _ = popen.communicate()
   for line in out.splitlines():
     if line and 'manifest authoring warning 81010002' not in line:
-      print line
+      print(line)
   return popen.returncode
 
 if __name__ == '__main__':

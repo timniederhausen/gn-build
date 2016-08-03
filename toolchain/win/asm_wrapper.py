@@ -14,7 +14,7 @@ def GetEnv(arch):
 def main(arch, *args):
   """Filter logo banner from invocations of asm.exe."""
   env = GetEnv(arch)
-  popen = subprocess.Popen(args, shell=True, env=env,
+  popen = subprocess.Popen(args, shell=True, env=env, universal_newlines=True,
                            stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
   out, _ = popen.communicate()
   for line in out.splitlines():
@@ -22,7 +22,7 @@ def main(arch, *args):
         not line.startswith('Microsoft (R) Macro Assembler') and
         not line.startswith(' Assembling: ') and
         line):
-      print line
+      print(line)
   return popen.returncode
 
 if __name__ == '__main__':
