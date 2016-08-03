@@ -27,6 +27,7 @@ def main(arch, source, output, rc_name, *args):
   args = list(args)
 
   output_dir = os.path.split(output)[0]
+  source_name = os.path.split(source)[1]
 
   # Try fixing all those relative include directories.
   def fix_dirs(arg):
@@ -51,6 +52,9 @@ def main(arch, source, output, rc_name, *args):
 
   # Now we need to fix the relative paths of our included files
   for line in out.splitlines():
+    if not line or line.strip() == source_name:
+      continue
+
     if not line.startswith(msvc_deps_prefix):
       print(line)
       continue
