@@ -4,6 +4,7 @@
 
 import("//build/config/compiler.gni")
 import("//build/config/sanitizers/sanitizers.gni")
+import("//build/toolchain/toolchain.gni")
 
 if (current_cpu == "arm") {
   import("//build/config/arm.gni")
@@ -44,14 +45,20 @@ declare_args() {
   # significantly slow execution.
   enable_iterator_debugging = false
 
-  # TODO(GYP): We should be using 64-bit gold for linking on both 64-bit Linux
-  # and 32-bit linux; 32-bit Gold runs out of address-space on 32-bit builds.
-  # However, something isn't quite working right on the 32-bit builds.
-  use_gold = is_linux && (current_cpu == "x64" || current_cpu == "arm")
-
   # When we are going to use gold we need to find it.
   # This is initialized below, after use_gold might have been overridden.
   gold_path = ""
+
+  # Omit unwind support in official builds to save space.
+  # We can use breakpad for these builds.
+  exclude_unwind_tables = false
+
+  # If true, gold linker will save symbol table inside object files.
+  # This speeds up gdb startup by 60%
+  gdb_index = false
+
+  # Enable fatal linker warnings.
+  fatal_linker_warnings = true
 }
 
 # compiler ---------------------------------------------------------------------
@@ -111,7 +118,7 @@ config("compiler") {
     }
 
     # Linker warnings.
-    if (!is_mac && !is_freebsd) {
+    if (fatal_linker_warnings && !is_mac && !is_freebsd) {
       ldflags += [ "-Wl,--fatal-warnings" ]
     }
   }
@@ -131,10 +138,7 @@ config("compiler") {
   # -----------------------------------
   if (is_posix && !is_mac) {
     if (enable_profiling && !is_debug) {
-      cflags += [
-        "-fno-omit-frame-pointer",
-        "-g",
-      ]
+      cflags += [ "-g" ]
 
       if (enable_full_stack_frames_for_profiling) {
         cflags += [
@@ -142,6 +146,16 @@ config("compiler") {
           "-fno-optimize-sibling-calls",
         ]
       }
+    }
+
+    if (exclude_unwind_tables) {
+      cflags += [
+        "-fno-unwind-tables",
+        "-fno-asynchronous-unwind-tables",
+      ]
+      defines += [ "NO_UNWIND_TABLES" ]
+    } else {
+      cflags += [ "-funwind-tables" ]
     }
   }
 
@@ -166,7 +180,9 @@ config("compiler") {
 
   # Linux-specific compiler flags setup.
   # ------------------------------------
-  if (use_gold) {
+  if (is_posix && use_lld) {
+    ldflags += [ "-fuse-ld=lld" ]
+  } else if (use_gold) {
     ldflags += [
       "-B$gold_path",
 
@@ -180,9 +196,13 @@ config("compiler") {
       # https://groups.google.com/a/chromium.org/group/chromium-dev/browse_thread/thread/281527606915bb36
       # Only apply this to the target linker, since the host
       # linker might not be gold, but isn't used much anyway.
-      #"-Wl,--threads",
-      #"-Wl,--thread-count=4",
+      "-Wl,--threads",
+      "-Wl,--thread-count=4",
     ]
+
+    if (gdb_index) {
+      ldflags += [ "-Wl,--gdb-index" ]
+    }
 
     if (!using_sanitizer) {
       ldflags += [ "-Wl,--icf=all" ]
@@ -738,6 +758,21 @@ if (is_win) {
   }
 }
 
+config("default_stack_frames") {
+  if (is_posix && !is_mac) {
+    if (using_sanitizer || enable_profiling || is_debug ||
+        current_cpu == "arm64") {
+      # Explicitly ask for frame pointers, otherwise:
+      # * Stacks may be missing for sanitizer and profiling builds.
+      # * Debug tcmalloc can crash (crbug.com/636489).
+      # * Stacks may be missing for arm64 crash dumps (crbug.com/391706).
+      cflags = [ "-fno-omit-frame-pointer" ]
+    } else if (is_android) {
+      cflags = [ "-fomit-frame-pointer" ]
+    }
+  }
+}
+
 # Default "optimization on" config.
 config("optimize") {
   if (is_win) {
@@ -866,6 +901,10 @@ config("symbols") {
     # http://clang.llvm.org/docs/UsersManual.html#cmdoption-ggdb
     cflags = [ "-ggdb3" ]
     asmflags = cflags
+
+    if (use_debug_fission) {
+      cflags += [ "-gsplit-dwarf" ]
+    }
   }
 }
 
@@ -887,6 +926,10 @@ config("minimal_symbols") {
     # http://clang.llvm.org/docs/UsersManual.html#cmdoption-ggdb
     cflags = [ "-ggdb1" ]
     asmflags = cflags
+
+    if (use_debug_fission) {
+      cflags += [ "-gsplit-dwarf" ]
+    }
   }
 }
 

@@ -2,6 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# These are primarily relevant in current_cpu == "mips*" contexts, where
+# MIPS code is being compiled.  But they can also be relevant in the
+# other contexts when the code will change its behavior based on the
+# cpu it wants to generate code for.
 if (current_cpu == "mipsel") {
   declare_args() {
     # MIPS arch variant. Possible values are:
@@ -15,6 +19,9 @@ if (current_cpu == "mipsel") {
     #   1: revision 1
     #   2: revision 2
     mips_dsp_rev = 0
+
+    # MIPS SIMD Arch compilation flag.
+    mips_use_msa = true
 
     # MIPS floating-point ABI. Possible values are:
     #   "hard": sets the GCC -mhard-float option.
@@ -31,7 +38,16 @@ if (current_cpu == "mipsel") {
   # MIPS arch variant. Possible values are:
   #   "r2"
   #   "r6"
-  declare_args() {
-    mips_arch_variant = "r2"
+  if (current_os == "android" || target_os == "android") {
+    declare_args() {
+      mips_arch_variant = "r6"
+
+      # MIPS SIMD Arch compilation flag.
+      mips_use_msa = true
+    }
+  } else {
+    declare_args() {
+      mips_arch_variant = "r2"
+    }
   }
 }

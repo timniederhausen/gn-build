@@ -3,17 +3,27 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # How many symbols to include in the build. This affects the performance of
-  # the build since the symbols are large and dealing with them is slow.
-  #   2 means regular build with symbols.
-  #   1 means minimal symbols, usually enough for backtraces only.
-  #   0 means no symbols.
-  symbol_level = 2
-
   # Compile in such a way as to enable profiling of the generated code. For
   # example, don't omit the frame pointer and leave in symbols.
   enable_profiling = false
-}
 
-# If it wasn't manually set, set to an appropriate default.
-assert(symbol_level >= 0 && symbol_level <= 2, "Invalid symbol_level")
+  # use_debug_fission: whether to use split DWARF debug info
+  # files. This can reduce link time significantly, but is incompatible
+  # with some utilities such as icecc and ccache. Requires gold and
+  # gcc >= 4.8 or clang.
+  # http://gcc.gnu.org/wiki/DebugFission
+  #
+  # This is a placeholder value indicating that the code below should set
+  # the default.  This is necessary to delay the evaluation of the default
+  # value expression until after its input values such as use_gold have
+  # been set, e.g. by a toolchain_args() block.
+  use_debug_fission = false
+
+  # Tell VS to create a PDB that references information in .obj files rather
+  # than copying it all. This should improve linker performance. mspdbcmf.exe
+  # can be used to convert a fastlink pdb to a normal one.
+  is_win_fastlink = false
+
+  # Whether to use the gold linker from binutils instead of lld or bfd.
+  use_gold = false
+}

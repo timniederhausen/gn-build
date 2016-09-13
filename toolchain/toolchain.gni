@@ -6,9 +6,40 @@
 # toolchain() rules themselves.
 
 declare_args() {
-  # Set to true to use lld, the LLVM linker.
+  # Clang install directory.
+  # NOTE: This is currently only used on Windows!
+  clang_base_path = ""
+
+  # Enable Link Time Optimization in optimized builds (output programs run
+  # faster, but linking is up to 5-20x slower).
+  # Note: use target_os == "linux" rather than is_linux so that it does not
+  # apply to host_toolchain when target_os="android".
+  allow_posix_link_time_opt = false
+
+  # Set to true to use lld, the LLVM linker. This flag may be used on Windows
+  # with the shipped LLVM toolchain, or on Linux with a self-built top-of-tree
+  # LLVM toolchain (see llvm_force_head_revision in
+  # build/config/compiler/BUILD.gn).
   use_lld = false
+
+  # How many symbols to include in the build. This affects the performance of
+  # the build since the symbols are large and dealing with them is slow.
+  #   2 means regular build with symbols.
+  #   1 means minimal symbols, usually enough for backtraces only.
+  #   0 means no symbols.
+  symbol_level = 2
 }
+
+if (is_win && is_clang) {
+  # On non-Windows we just assume the clang executables are on the path
+  # and we're not using sanitizers etc.
+  # TODO(tim): Add assertions
+  assert(clang_base_path != "",
+         "You must set clang_base_path when using Clang on Windows")
+}
+
+# If it wasn't manually set, set to an appropriate default.
+assert(symbol_level >= 0 && symbol_level <= 2, "Invalid symbol_level")
 
 # Extension for shared library files (including leading dot).
 if (is_mac) {

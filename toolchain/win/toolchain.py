@@ -8,6 +8,9 @@ import os
 import subprocess
 import sys
 
+sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
+import gn_helpers
+
 def _RegistryGetValueUsingWinReg(key, value):
   """Use the _winreg module to obtain the value of a registry key.
 
@@ -164,11 +167,12 @@ def GetVsPath(version_as_year):
   print(DetectVisualStudioPath(version_as_year))
 
 
-def SetupToolchain(vs_path):
+def SetupToolchain(vs_path, include_prefix):
   cpus = ('x86', 'x64')
 
   bin_dirs = {}
   windows_sdk_paths = {}
+  include_flags = {}
   for cpu in cpus:
     # Extract environment variables for subprocesses.
     env = _LoadToolchainEnv(vs_path, cpu)
@@ -179,6 +183,12 @@ def SetupToolchain(vs_path):
       if os.path.exists(os.path.join(path, 'cl.exe')):
         bin_dirs[cpu] = os.path.realpath(path)
         break
+
+    # The separator for INCLUDE here must match the one used in
+    # _LoadToolchainEnv() above.
+    include = [include_prefix + p for p in env['INCLUDE'].split(';') if p]
+    include = ' '.join(['"' + i.replace('"', r'\"') + '"' for i in include])
+    include_flags[cpu] = include
 
     env_block = _FormatAsEnvironmentBlock(env)
     with open('environment.' + cpu, 'wb') as f:
@@ -196,10 +206,15 @@ def SetupToolchain(vs_path):
   if len(set(windows_sdk_paths.values())) != 1:
     raise Exception("WINDOWSSDKDIR is different for x86/x64")
 
-  print('''x86_bin_dir = "%s"
-x64_bin_dir = "%s"
-windows_sdk_path = "%s"''' % (
-  bin_dirs['x86'], bin_dirs['x64'], windows_sdk_paths['x86']))
+  print('x86_bin_dir = ' + gn_helpers.ToGNString(bin_dirs['x86']))
+  print('x64_bin_dir = ' + gn_helpers.ToGNString(bin_dirs['x64']))
+
+  print('x86_include_flags = ' + gn_helpers.ToGNString(include_flags['x86']))
+  print('x64_include_flags = ' + gn_helpers.ToGNString(include_flags['x64']))
+
+  # SDK is always the same
+  print('windows_sdk_path = ' + gn_helpers.ToGNString(windows_sdk_paths['x86']))
+
 
 def main():
   commands = {

@@ -18,6 +18,9 @@ The toolchains have been tested on the following platforms:
 * `is_clang` (default: false): Favor Clang over the platform default (GCC/MSVC).
 * `use_lld` (default: false): Use the new LLD linker.
   This requires `is_clang` to be true.
+* `clang_base_path` (default: ""): The path of your Clang installation folder
+  (without /bin). If you use Clang on Windows, you are required to set this,
+  as the Clang installation isn't automatically detected.
 
 ### Windows toolchain
 
@@ -26,8 +29,6 @@ The toolchains have been tested on the following platforms:
   Autodetected based on `visual_studio_version`.
 * `windows_sdk_path` (default: auto-detected):
   Path of your Windows SDK installation.
-* `win_clang_prefix` (default: ""): If `is_clang` is true, this is required to
-  point to the directory containing the `clang-cl` executable.
 
 ### POSIX toolchain
 
