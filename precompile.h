@@ -6,7 +6,7 @@
 // any C++ headers must go in the __cplusplus block below.
 
 #if defined(BUILD_PRECOMPILE_H_)
-#error You shouldn't include the precompiled header file more than once.
+#error "You shouldn't include the precompiled header file more than once."
 #endif
 
 #define BUILD_PRECOMPILE_H_
