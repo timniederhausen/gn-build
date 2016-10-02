@@ -1,7 +1,7 @@
 declare_args() {
   # Version of Visual Studio pointed to by the visual_studio_path.
-  # Use 2013 for Visual Studio 2013.
-  visual_studio_version = 2013
+  # Use "2013" for Visual Studio 2013.
+  visual_studio_version = "2013"
 
   # Path to Visual Studio.
   visual_studio_path = ""
@@ -23,7 +23,7 @@ if (visual_studio_path == "") {
   visual_studio_path = exec_script("toolchain.py",
                                    [
                                      "get_vs_dir",
-                                     "" + visual_studio_version,
+                                     visual_studio_version,
                                    ],
                                    "trim string")
 }

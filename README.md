@@ -29,7 +29,7 @@ branch contains the test/example project used by the CI tests.
 
 ### Windows toolchain
 
-* `visual_studio_version` (default: 2013): The MSVC version to use. This is an integer.
+* `visual_studio_version` (default: 2013): The MSVC version to use.
 * `visual_studio_path` (default: auto-detected): The path of your MSVC installation.
   Autodetected based on `visual_studio_version`.
 * `windows_sdk_path` (default: auto-detected):

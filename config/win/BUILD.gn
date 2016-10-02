@@ -77,9 +77,9 @@ config("compiler") {
   # experimental.
   if (is_clang) {
     # TODO(tim): Use msc_full_ver / 100000 here?
-    if (visual_studio_version == 2013) {
+    if (visual_studio_version == "2013") {
       cflags += [ "-fmsc-version=1800" ]
-    } else if (visual_studio_version == 2015) {
+    } else if (visual_studio_version == "2015") {
       cflags += [ "-fmsc-version=1900" ]
     } else {
       assert(false, "Unsupported visual_studio_version")
