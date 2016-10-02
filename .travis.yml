@@ -1,0 +1,53 @@
+language: cpp
+
+env:
+  global:
+    - GN_LNX64_SHA1: 3841819dc328973fb34ea2dd3bbbc0b63361b1f9
+
+addons:
+  apt:
+    sources: &sources
+      # this is needed for gcc and clang
+      - ubuntu-toolchain-r-test
+    packages: &packages
+      - ninja-build
+
+matrix:
+  include:
+    - compiler: gcc
+      os: linux
+      addons:
+        apt:
+          sources:
+            - *sources
+          packages:
+            - g++-4.9
+            - *packages
+
+    - compiler: clang
+      os: linux
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-precise-3.8
+            - *sources
+          packages:
+            - clang-3.8
+            - *packages
+
+install:
+  # GCC 4.9
+  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9" CC="gcc-4.9" GN_ARGS="gcc_cc=\"gcc-4.9\" gcc_cxx=\"g++-4.9\" is_clang=false"; fi
+  # Clang 3.8
+  - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.8" CC="clang-3.8" GN_ARGS="clang_cc=\"clang-3.8\" clang_cxx=\"clang++-3.8\" is_clang=true"; fi
+
+script:
+  - travis_retry wget --no-check-certificate --quiet -O gn https://storage.googleapis.com/chromium-gn/$GN_LNX64_SHA1
+  - chmod +x gn
+  - git clone --branch=testsrc https://github.com/timniederhausen/gn-build.git testsrc
+  - mkdir testsrc/build
+  - mv config testsrc/build/
+  - mv toolchain testsrc/build/
+  - chmod +x gn && ./gn gen out --args="is_debug=false $GN_ARGS" --root=testsrc
+  - ninja -C out
+  - out/hello
