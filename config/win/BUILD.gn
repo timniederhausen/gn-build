@@ -56,7 +56,7 @@ config("compiler") {
   cflags_c = [ "/TC" ]
   cflags_cc = [ "/TP" ]
 
-  if (visual_studio_version >= 2015 && !is_clang) {
+  if (msc_full_ver >= 190000000 && !is_clang) {
     cflags += [
       # Tell the compiler to crash on failures. This is undocumented
       # and unsupported but very handy.
@@ -64,7 +64,7 @@ config("compiler") {
     ]
   }
 
-  if (visual_studio_version >= 2015) {
+  if (msc_full_ver >= 190000000) {
     cflags += [
       # Work around a bug in VS 2015 RTM compiler.
       # https://connect.microsoft.com/VisualStudio/feedback/details/1737411/compiler-creates-references-to-global-delete-which-are-satisfied-by-pseudo-random-object-files
@@ -76,6 +76,7 @@ config("compiler") {
   # Building with Clang on Windows is a work in progress and very
   # experimental.
   if (is_clang) {
+    # TODO(tim): Use msc_full_ver / 100000 here?
     if (visual_studio_version == 2013) {
       cflags += [ "-fmsc-version=1800" ]
     } else if (visual_studio_version == 2015) {
@@ -232,7 +233,7 @@ config("common_linker_setup") {
   ]
 
   # Tell the linker to crash on failures.
-  if (visual_studio_version >= 2015) {
+  if (msc_full_ver >= 190000000) {
     ldflags += [ "/fastfail" ]
   }
 

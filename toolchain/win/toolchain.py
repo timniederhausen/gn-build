@@ -79,16 +79,21 @@ def _ExtractImportantEnvironment(output_of_set):
   return env
 
 
+def _Call(args, **kwargs):
+  popen = subprocess.Popen(args, shell=True, universal_newlines=True,
+                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                           **kwargs)
+  out, _ = popen.communicate()
+  if popen.returncode != 0:
+    raise Exception('"%s" failed with error %d' % (args, popen.returncode))
+  return out
+
+
 def _LoadEnvFromBat(args):
   """Given a bat command, runs it and returns env vars set by it."""
   args = args[:]
   args.extend(('&&', 'set'))
-  popen = subprocess.Popen(args, shell=True, universal_newlines=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-  variables, _ = popen.communicate()
-  if popen.returncode != 0:
-    raise Exception('"%s" failed with error %d' % (args, popen.returncode))
-  return variables
+  return _Call(args)
 
 
 def _LoadToolchainEnv(vs_path, cpu):
@@ -125,6 +130,21 @@ def _FormatAsEnvironmentBlock(envvar_dict):
   return block
 
 
+def _ParseClVersion(out):
+  for line in out.splitlines():
+    m = re.search(r'Version ([0-9.]+)', line)
+    if not m:
+      continue
+
+    version = m.group(1).split('.')
+    if len(version) != 3 or len(version[1]) != 2 or len(version[2]) != 5:
+      raise Exception("Invalid MSVC version: " + str(version))
+
+    return ''.join(version)
+
+  raise Exception("Failed to find MSVC version string in: " + out)
+
+
 def DetectVisualStudioPath(version_as_year):
   """Return path to the version_as_year of Visual Studio.
   """
@@ -151,17 +171,6 @@ def DetectVisualStudioPath(version_as_year):
                    ' not found.') % (version_as_year))
 
 
-def YearToVersionNumber(version_as_year):
-  """Gets the standard version number ('120', '140', etc.) based on
-  version_as_year."""
-  if version_as_year == '2013':
-    return '120'
-  elif version_as_year == '2015':
-    return '140'
-  else:
-    raise ValueError('Unexpected version_as_year')
-
-
 def GetVsPath(version_as_year):
   """Gets location information about the current toolchain. This is used for the GN build."""
   print(DetectVisualStudioPath(version_as_year))
@@ -173,6 +182,8 @@ def SetupToolchain(vs_path, include_prefix):
   bin_dirs = {}
   windows_sdk_paths = {}
   include_flags = {}
+  cl_versions = {}
+
   for cpu in cpus:
     # Extract environment variables for subprocesses.
     env = _LoadToolchainEnv(vs_path, cpu)
@@ -183,6 +194,8 @@ def SetupToolchain(vs_path, include_prefix):
       if os.path.exists(os.path.join(path, 'cl.exe')):
         bin_dirs[cpu] = os.path.realpath(path)
         break
+
+    cl_versions[cpu] = _Call(['cl'], env=env)
 
     # The separator for INCLUDE here must match the one used in
     # _LoadToolchainEnv() above.
@@ -199,6 +212,7 @@ def SetupToolchain(vs_path, include_prefix):
       env['LIB']     = env['LIB']    .replace(r'\VC\LIB', r'\VC\LIB\STORE')
     if 'LIBPATH' in env:
       env['LIBPATH'] = env['LIBPATH'].replace(r'\VC\LIB', r'\VC\LIB\STORE')
+
     env_block = _FormatAsEnvironmentBlock(env)
     with open('environment.winrt_' + cpu, 'wb') as f:
         f.write(env_block)
@@ -215,6 +229,8 @@ def SetupToolchain(vs_path, include_prefix):
   # SDK is always the same
   print('windows_sdk_path = ' + gn_helpers.ToGNString(windows_sdk_paths['x86']))
 
+  # TODO(tim): Check for mismatches between x86 and x64?
+  print('msc_full_ver = ' + _ParseClVersion(cl_versions['x86']))
 
 def main():
   commands = {

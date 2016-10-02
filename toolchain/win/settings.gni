@@ -10,6 +10,10 @@ declare_args() {
   # This value is the default location, override if you have a different
   # installation location.
   windows_sdk_path = ""
+
+  # Value of the _MSC_FULL_VER variable.
+  # see: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
+  msc_full_ver = 0
 }
 
 assert(visual_studio_version != "",
@@ -47,6 +51,10 @@ toolchain_data = exec_script("toolchain.py",
 
 if (windows_sdk_path == "") {
   windows_sdk_path = toolchain_data.windows_sdk_path
+}
+
+if (msc_full_ver == 0) {
+  msc_full_ver = toolchain_data.msc_full_ver
 }
 
 # These are hardcoded in toolchain.py
