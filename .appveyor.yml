@@ -1,0 +1,46 @@
+clone_folder: c:\projects\gn-build\build
+
+shallow_clone: true
+
+environment:
+  GN_WIN_SHA1: 217e559aac0d20119f1667a880cebd02824ec685
+
+  matrix:
+    - GN_ARGS: "visual_studio_version=\\\"2013\\\""
+    - GN_ARGS: "visual_studio_version=\\\"2015\\\""
+
+matrix:
+  fast_finish: true
+
+install:
+  # All external dependencies are installed in C:\projects\deps
+  - mkdir C:\projects\deps
+
+  # Install the current GN version
+  - set GN_URL="https://storage.googleapis.com/chromium-gn/%GN_WIN_SHA1%"
+  - appveyor DownloadFile %GN_URL% -FileName C:\projects\deps\gn.exe
+  - set PATH=C:\projects\deps;%PATH%
+  - gn --version
+
+  # Install Ninja
+  - set NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.6.0/ninja-win.zip"
+  - appveyor DownloadFile %NINJA_URL% -FileName C:\projects\deps\ninja.zip
+  - 7z x C:\projects\deps\ninja.zip -oC:\projects\deps\ninja > nul
+  - set PATH=C:\projects\deps\ninja;%PATH%
+  - ninja --version
+
+before_build:
+  - cd c:\projects\gn-build
+  - git init
+  - git remote add origin https://github.com/timniederhausen/gn-build.git
+  - git fetch
+  - git checkout -t origin/testsrc
+
+build_script:
+  # Build the debug version to stay inside our allowed timeframe (1h)
+  - gn gen out --args="is_debug=false %GN_ARGS%"
+  - ninja -C out
+
+test_script:
+  - python build\gn_helpers_unittest.py
+  - out\hello
