@@ -228,10 +228,12 @@ config("common_linker_setup") {
     "/ignore:4221",
     "/NXCOMPAT",
     "/DYNAMICBASE",
-    # Tell the linker to crash on failures.
-    "/fastfail",
   ]
 
+  # Tell the linker to crash on failures.
+  if (visual_studio_version != "2013") {
+    ldflags += [ "/fastfail" ]
+  }
 
   if (win_linker_timing) {
     ldflags += [
