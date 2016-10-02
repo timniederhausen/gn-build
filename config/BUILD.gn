@@ -302,12 +302,6 @@ config("compiler_cpu_abi") {
             "-mips32r6",
             "-Wa,-mips32r6",
           ]
-          if (is_android) {
-            ldflags += [
-              "-mips32r6",
-              "-Wl,-melf32ltsmip",
-            ]
-          }
         }
       } else if (mips_arch_variant == "r2") {
         if (is_clang) {
@@ -767,8 +761,6 @@ config("default_stack_frames") {
       # * Debug tcmalloc can crash (crbug.com/636489).
       # * Stacks may be missing for arm64 crash dumps (crbug.com/391706).
       cflags = [ "-fno-omit-frame-pointer" ]
-    } else if (is_android) {
-      cflags = [ "-fomit-frame-pointer" ]
     }
   }
 }
