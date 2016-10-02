@@ -1,0 +1,39 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/precompiled_header.gni")
+
+precompiled_header("hello_pch") {
+  precompiled_header = "precompile.h"
+  precompiled_source = "//precompile.cc"
+}
+
+executable("hello") {
+  sources = [
+    "hello.cc",
+  ]
+
+  configs += [ ":hello_pch" ]
+
+  deps = [
+    ":hello_shared",
+    ":hello_static",
+  ]
+}
+
+shared_library("hello_shared") {
+  sources = [
+    "hello_shared.cc",
+    "hello_shared.h",
+  ]
+
+  defines = [ "HELLO_SHARED_IMPLEMENTATION" ]
+}
+
+static_library("hello_static") {
+  sources = [
+    "hello_static.cc",
+    "hello_static.h",
+  ]
+}
