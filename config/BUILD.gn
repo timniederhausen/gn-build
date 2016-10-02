@@ -224,12 +224,6 @@ config("compiler") {
     cflags += [ "-fdebug-prefix-map=$absolute_path=." ]
   }
 
-  # C++14 compiler flags setup.
-  # ---------------------------
-  if (!is_win) {
-    cflags_cc += [ "-std=c++14" ]
-  }
-
   # Pass the same C/C++ flags to the objective C/C++ compiler.
   cflags_objc += cflags_c
   cflags_objcc += cflags_cc
@@ -609,6 +603,26 @@ config("clang_warnings") {
       # Warns when a const char[] is converted to bool.
       "-Wstring-conversion",
     ]
+  }
+}
+
+# C++ standard to use ---------------------------------------------------------
+
+config("c++11") {
+  if (!is_win) {
+    cflags_cc = [ "-std=c++11" ]
+  }
+}
+
+config("c++14") {
+  if (!is_win) {
+    cflags_cc = [ "-std=c++14" ]
+  }
+}
+
+config("c++latest") {
+  if (!is_win) {
+    cflags_cc = [ "-std=c++1z" ]
   }
 }
 
