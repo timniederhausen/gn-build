@@ -42,6 +42,7 @@ install:
   - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.8" CC="clang-3.8" GN_ARGS="clang_cc=\"clang-3.8\" clang_cxx=\"clang++-3.8\" is_clang=true"; fi
 
 script:
+  - python gn_helpers_unittest.py
   - travis_retry wget --no-check-certificate --quiet -O gn https://storage.googleapis.com/chromium-gn/$GN_LNX64_SHA1
   - chmod +x gn
   - git clone --branch=testsrc https://github.com/timniederhausen/gn-build.git testsrc
