@@ -50,5 +50,6 @@ script:
   - mv config testsrc/build/
   - mv toolchain testsrc/build/
   - chmod +x gn && ./gn gen out --args="is_debug=false $GN_ARGS" --root=testsrc
+  - cat out/args.gn
   - ninja -C out
   - out/hello

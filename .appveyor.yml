@@ -41,6 +41,7 @@ before_build:
 build_script:
   # Build the debug version to stay inside our allowed timeframe (1h)
   - gn gen out --args="is_debug=false %GN_ARGS%"
+  - type out\args.gn
   - ninja -C out
 
 test_script:
