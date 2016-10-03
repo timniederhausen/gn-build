@@ -1,3 +1,7 @@
+if (is_clang) {
+  import("//build/toolchain/toolchain.gni")
+}
+
 declare_args() {
   # Version of Visual Studio pointed to by the visual_studio_path.
   # Use "2013" for Visual Studio 2013.
@@ -16,6 +20,14 @@ declare_args() {
   msc_full_ver = 0
 }
 
+if (is_clang) {
+  declare_args() {
+    # Version of the Clang compiler.
+    # Format: MAJOR * 10000 + MINOR * 100 + PATCHLEVEL
+    clang_version = 0
+  }
+}
+
 assert(visual_studio_version != "",
        "You must set visual_studio_version on Windows")
 
@@ -30,9 +42,11 @@ if (visual_studio_path == "") {
 
 if (is_clang) {
   sys_include_prefix = "-imsvc"
+  _clang_base_path_arg = clang_base_path
 } else {
   # MSVC doesn't have the concept of system headers.
   sys_include_prefix = "/I"
+  _clang_base_path_arg = ""
 }
 
 if (host_os == "win") {
@@ -46,6 +60,10 @@ toolchain_data = exec_script("toolchain.py",
                                "setup_toolchain",
                                visual_studio_path,
                                sys_include_prefix,
+                               # Don't use clang_base_path directly, so we can
+                               # skip clang detection if not needed
+                               # (i.e. !is_clang).
+                               _clang_base_path_arg,
                              ],
                              "scope")
 
@@ -55,6 +73,10 @@ if (windows_sdk_path == "") {
 
 if (msc_full_ver == 0) {
   msc_full_ver = toolchain_data.msc_full_ver
+}
+
+if (is_clang && clang_version == 0) {
+  clang_version = toolchain_data.clang_version
 }
 
 # These are hardcoded in toolchain.py

@@ -146,6 +146,32 @@ def _ParseClVersion(out):
   raise Exception("Failed to find MSVC version string in: " + out)
 
 
+def _GetClangVersion(clang_base_path):
+  clang_version = 0
+  msc_full_ver = 0
+
+  path = os.path.join(clang_base_path, 'bin', 'clang-cl')
+  output = subprocess.check_output('echo "" | "{}" -Xclang -dM -E -'.format(path),
+                                   shell=True, universal_newlines=True)
+
+  for define in output.splitlines():
+    define = re.findall(r'#define ([a-zA-Z0-9_]+) (.*)', define)
+    if not define:
+      continue
+
+    name, value = define[0]
+    if name == '__clang_major__':
+      clang_version += 10000 * int(value)
+    elif name == '__clang_minor__':
+      clang_version += 100 * int(value)
+    elif name == '__clang_patchlevel__':
+      clang_version += int(value)
+    elif name == '_MSC_FULL_VER':
+      msc_full_ver = int(value)
+
+  return clang_version, msc_full_ver
+
+
 def DetectVisualStudioPath(version_as_year):
   """Return path to the version_as_year of Visual Studio.
   """
@@ -177,17 +203,18 @@ def GetVsPath(version_as_year):
   print(DetectVisualStudioPath(version_as_year))
 
 
-def SetupToolchain(vs_path, include_prefix):
+def SetupToolchain(vs_path, include_prefix, clang_base_path=None):
   cpus = ('x86', 'x64')
 
   bin_dirs = {}
   windows_sdk_paths = {}
   include_flags = {}
-  cl_versions = {}
+  envs = {}
 
   for cpu in cpus:
     # Extract environment variables for subprocesses.
     env = _LoadToolchainEnv(vs_path, cpu)
+    envs[cpu] = env
 
     windows_sdk_paths[cpu] = os.path.realpath(env['WINDOWSSDKDIR'])
 
@@ -195,8 +222,6 @@ def SetupToolchain(vs_path, include_prefix):
       if os.path.exists(os.path.join(path, 'cl.exe')):
         bin_dirs[cpu] = os.path.realpath(path)
         break
-
-    cl_versions[cpu] = _Call(['cl'], env=env)
 
     # The separator for INCLUDE here must match the one used in
     # _LoadToolchainEnv() above.
@@ -231,7 +256,13 @@ def SetupToolchain(vs_path, include_prefix):
   print('windows_sdk_path = ' + gn_helpers.ToGNString(windows_sdk_paths['x86']))
 
   # TODO(tim): Check for mismatches between x86 and x64?
-  print('msc_full_ver = ' + _ParseClVersion(cl_versions['x86']))
+  if clang_base_path:
+    clang_version, msc_full_ver = _GetClangVersion(clang_base_path)
+    print('clang_version = ' + str(clang_version))
+    print('msc_full_ver = ' + str(msc_full_ver))
+  else:
+    print('msc_full_ver = ' + _ParseClVersion(_Call(['cl'], env=envs['x86'])))
+
 
 def main():
   commands = {

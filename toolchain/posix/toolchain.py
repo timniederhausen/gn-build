@@ -4,7 +4,7 @@ import subprocess
 import sys
 
 def _get_compiler_version(path, major_define, minor_define, patchlevel_define):
-  defines = subprocess.check_output("echo | {} -dM -E -".format(path), shell=True).split("\n")
+  defines = subprocess.check_output('echo "" | {} -dM -E -'.format(path), shell=True).split('\n')
   version = 0
   for define in defines:
     define = re.findall(r'#define ([a-zA-Z0-9_]+) (.*)', define)
