@@ -8,6 +8,8 @@ environment:
   matrix:
     - GN_ARGS: "visual_studio_version=\\\"2013\\\""
     - GN_ARGS: "visual_studio_version=\\\"2015\\\""
+    - GN_ARGS: "visual_studio_version=\\\"2013\\\" clang_base_path=\\\"C:\\Program Files\\LLVM\\\" is_clang=true"
+    - GN_ARGS: "visual_studio_version=\\\"2015\\\" clang_base_path=\\\"C:\\Program Files\\LLVM\\\" is_clang=true"
 
 matrix:
   fast_finish: true
