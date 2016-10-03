@@ -141,18 +141,28 @@ def _ParseClVersion(out):
        len(version[2]) != 5:
       raise Exception("Invalid MSVC version: " + str(version))
 
-    return ''.join(version[:3])
+    return int(''.join(version[:3]))
 
   raise Exception("Failed to find MSVC version string in: " + out)
 
 
-def _GetClangVersion(clang_base_path):
+def _GetClangVersion(clang_base_path, version_as_year):
+  year_to_version = {
+      '2013': '1800',
+      '2015': '1900',
+  }
+  if version_as_year not in year_to_version:
+    raise Exception(('Visual Studio version %s (from version_as_year)'
+                     ' not supported. Supported versions are: %s') % (
+                       version_as_year, ', '.join(year_to_version.keys())))
+
+  msc_ver = year_to_version[version_as_year]
   clang_version = 0
   msc_full_ver = 0
 
   path = os.path.join(clang_base_path, 'bin', 'clang-cl')
-  output = subprocess.check_output('echo "" | "{}" -Xclang -dM -E -'.format(path),
-                                   shell=True, universal_newlines=True)
+  cmd = 'echo "" | "{}" -fmsc-version={} -Xclang -dM -E -'.format(path, msc_ver)
+  output = subprocess.check_output(cmd, shell=True, universal_newlines=True)
 
   for define in output.splitlines():
     define = re.findall(r'#define ([a-zA-Z0-9_]+) (.*)', define)
@@ -203,7 +213,7 @@ def GetVsPath(version_as_year):
   print(DetectVisualStudioPath(version_as_year))
 
 
-def SetupToolchain(vs_path, include_prefix, clang_base_path=None):
+def SetupToolchain(version_as_year, vs_path, include_prefix, clang_base_path=None):
   cpus = ('x86', 'x64')
 
   bin_dirs = {}
@@ -257,11 +267,14 @@ def SetupToolchain(vs_path, include_prefix, clang_base_path=None):
 
   # TODO(tim): Check for mismatches between x86 and x64?
   if clang_base_path:
-    clang_version, msc_full_ver = _GetClangVersion(clang_base_path)
-    print('clang_version = ' + str(clang_version))
-    print('msc_full_ver = ' + str(msc_full_ver))
+    clang_version, msc_full_ver = _GetClangVersion(clang_base_path, version_as_year)
+    print('clang_version = ' + gn_helpers.ToGNString(clang_version))
+    print('msc_ver = ' + gn_helpers.ToGNString(msc_full_ver // 100000))
+    print('msc_full_ver = ' + gn_helpers.ToGNString(msc_full_ver))
   else:
-    print('msc_full_ver = ' + _ParseClVersion(_Call(['cl'], env=envs['x86'])))
+    msc_full_ver = _ParseClVersion(_Call(['cl'], env=envs['x86']))
+    print('msc_ver = ' + gn_helpers.ToGNString(msc_full_ver // 100000))
+    print('msc_full_ver = ' + gn_helpers.ToGNString(msc_full_ver))
 
 
 def main():

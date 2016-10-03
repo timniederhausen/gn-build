@@ -15,6 +15,10 @@ declare_args() {
   # installation location.
   windows_sdk_path = ""
 
+  # Value of the _MSC_VER variable.
+  # see: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
+  msc_ver = 0
+
   # Value of the _MSC_FULL_VER variable.
   # see: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
   msc_full_ver = 0
@@ -58,6 +62,7 @@ if (host_os == "win") {
 toolchain_data = exec_script("toolchain.py",
                              [
                                "setup_toolchain",
+                               visual_studio_version,
                                visual_studio_path,
                                sys_include_prefix,
                                # Don't use clang_base_path directly, so we can
@@ -69,6 +74,10 @@ toolchain_data = exec_script("toolchain.py",
 
 if (windows_sdk_path == "") {
   windows_sdk_path = toolchain_data.windows_sdk_path
+}
+
+if (msc_ver == 0) {
+  msc_ver = toolchain_data.msc_ver
 }
 
 if (msc_full_ver == 0) {
