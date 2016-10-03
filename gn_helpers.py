@@ -21,10 +21,10 @@ file to the build directory."""
 
 import sys
 
-if sys.version_info[0] == 3:
-    string_types = str
-else:
+if sys.version_info[0] < 3:
     string_types = basestring
+else:
+    string_types = str
 
 class GNException(Exception):
   pass
@@ -42,9 +42,6 @@ def ToGNString(value, allow_dicts = True):
     return '"' + \
         value.replace('\\', '\\\\').replace('"', '\\"').replace('$', '\\$') + \
         '"'
-
-  if isinstance(value, unicode):
-    return ToGNString(value.encode('utf-8'))
 
   if isinstance(value, bool):
     if value:
