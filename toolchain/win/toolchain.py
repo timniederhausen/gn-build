@@ -137,10 +137,11 @@ def _ParseClVersion(out):
       continue
 
     version = m.group(1).split('.')
-    if len(version) != 3 or len(version[1]) != 2 or len(version[2]) != 5:
+    if len(version) < 3 or len(version[0]) != 2 or len(version[1]) != 2 or \
+       len(version[2]) != 5:
       raise Exception("Invalid MSVC version: " + str(version))
 
-    return ''.join(version)
+    return ''.join(version[:3])
 
   raise Exception("Failed to find MSVC version string in: " + out)
 
