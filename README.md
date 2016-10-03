@@ -11,6 +11,7 @@ The toolchains have been tested on the following platforms:
 * Linux (GCC 5 / Clang 3.7)
 
 [![Build Status](https://travis-ci.org/timniederhausen/gn-build.svg?branch=master)](https://travis-ci.org/timniederhausen/gn-build)
+[![Build status](https://ci.appveyor.com/api/projects/status/jpot0c7wp6e78lkk?svg=true)](https://ci.appveyor.com/project/timniederhausen/gn-build)
 
 The [testsrc](https://github.com/timniederhausen/gn-build/tree/testsrc)
 branch contains the test/example project used by the CI tests.
