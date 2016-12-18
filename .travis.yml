@@ -16,7 +16,8 @@ matrix:
   include:
     - compiler: gcc
       os: linux
-      addons:
+      env: GN_ARGS='gcc_cc="gcc-4.9" gcc_cxx="g++-4.9" is_clang=false'
+      addons: &gcc_addons
         apt:
           sources:
             - *sources
@@ -24,9 +25,20 @@ matrix:
             - g++-4.9
             - *packages
 
+    - compiler: gcc
+      os: linux
+      env: GN_ARGS='gcc_cc="gcc-4.9" gcc_cxx="g++-4.9" is_clang=false is_debug=false'
+      addons: *gcc_addons
+
+    - compiler: gcc
+      os: linux
+      env: GN_ARGS='gcc_cc="gcc-4.9" gcc_cxx="g++-4.9" is_clang=false is_official_build=true'
+      addons: *gcc_addons
+
     - compiler: clang
       os: linux
-      addons:
+      env: GN_ARGS='clang_cc="clang-3.8" clang_cxx="clang++-3.8" is_clang=true'
+      addons: &clang_addons
         apt:
           sources:
             - llvm-toolchain-precise-3.8
@@ -35,11 +47,15 @@ matrix:
             - clang-3.8
             - *packages
 
-install:
-  # GCC 4.9
-  - if [ "$CXX" = "g++" ]; then export CXX="g++-4.9" CC="gcc-4.9" GN_ARGS="gcc_cc=\"gcc-4.9\" gcc_cxx=\"g++-4.9\" is_clang=false"; fi
-  # Clang 3.8
-  - if [ "$CXX" == "clang++" ]; then export CXX="clang++-3.8" CC="clang-3.8" GN_ARGS="clang_cc=\"clang-3.8\" clang_cxx=\"clang++-3.8\" is_clang=true"; fi
+    - compiler: clang
+      os: linux
+      env: GN_ARGS='clang_cc="clang-3.8" clang_cxx="clang++-3.8" is_clang=true is_debug=false'
+      addons: *clang_addons
+
+    - compiler: clang
+      os: linux
+      env: GN_ARGS='clang_cc="clang-3.8" clang_cxx="clang++-3.8" is_clang=true is_official_build=true'
+      addons: *clang_addons
 
 script:
   - python gn_helpers_unittest.py
@@ -49,7 +65,7 @@ script:
   - mkdir testsrc/build
   - mv config testsrc/build/
   - mv toolchain testsrc/build/
-  - chmod +x gn && ./gn gen out --args="is_debug=false $GN_ARGS" --root=testsrc
+  - chmod +x gn && ./gn gen out --args="$GN_ARGS" --root=testsrc
   - cat out/args.gn
   - ninja -C out
   - out/hello
