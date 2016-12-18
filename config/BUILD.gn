@@ -27,6 +27,10 @@ declare_args() {
   # With GCC, warnings in no-Chromium code are always not treated as errors.
   treat_warnings_as_errors = false
 
+  # Enable Link Time Optimization in optimized builds (output programs run
+  # faster, but linking is up to 5-20x slower).
+  enable_lto = is_official_build
+
   # Compile in such a way as to make it possible for the profiler to unwind full
   # stack frames. Setting this flag has a large effect on the performance of the
   # generated code than just setting profiling, but gives the profiler more
@@ -86,7 +90,10 @@ config("compiler") {
     configs += [ "//build/config/win:compiler" ]
   } else if (is_mac) {
     configs += [ "//build/config/mac:compiler" ]
-  } else {
+  }
+
+  # Applies to all Posix systems.
+  if (is_posix) {
     configs += [ "//build/config/posix:compiler" ]
   }
 
@@ -111,7 +118,13 @@ config("compiler") {
 
     # Stack protection.
     if (is_mac) {
-      cflags += [ "-fstack-protector-all" ]
+      # The strong variant of the stack protector significantly increases
+      # binary size, so only enable it in debug mode.
+      if (is_debug) {
+        cflags += [ "-fstack-protector-strong" ]
+      } else {
+        cflags += [ "-fstack-protector" ]
+      }
     } else if (is_posix) {
       # https://outflux.net/blog/archives/2014/01/27/fstack-protector-strong/
       cflags += [ "-fstack-protector-strong" ]
@@ -222,6 +235,17 @@ config("compiler") {
   if (is_clang && !is_win && clang_version >= 30800) {
     absolute_path = rebase_path("//.")
     cflags += [ "-fdebug-prefix-map=$absolute_path=." ]
+  }
+
+  # Add flags for link-time optimization. These flags enable
+  # optimizations/transformations that require whole-program visibility at link
+  # time, so they need to be applied to all translation units, and we may end up
+  # with miscompiles if only part of the program is compiled with LTO flags. For
+  # that reason, we cannot allow targets to enable or disable these flags, for
+  # example by disabling the optimize configuration.
+  # TODO(tim): The above comment only applies to GCC/Clang in Chromium.
+  if (enable_lto) {
+    configs += [ ":lto" ]
   }
 
   # Pass the same C/C++ flags to the objective C/C++ compiler.
@@ -410,6 +434,19 @@ config("compiler_arm_fpu") {
   if (current_cpu == "arm") {
     cflags = [ "-mfpu=$arm_fpu" ]
     asmflags = cflags
+  }
+}
+
+config("default_stack_frames") {
+  if (is_posix && !is_mac) {
+    if (using_sanitizer || enable_profiling || is_debug ||
+        current_cpu == "arm64") {
+      # Explicitly ask for frame pointers, otherwise:
+      # * Stacks may be missing for sanitizer and profiling builds.
+      # * Debug tcmalloc can crash (crbug.com/636489).
+      # * Stacks may be missing for arm64 crash dumps (crbug.com/391706).
+      cflags = [ "-fno-omit-frame-pointer" ]
+    }
   }
 }
 
@@ -766,19 +803,6 @@ if (is_win) {
   }
 }
 
-config("default_stack_frames") {
-  if (is_posix && !is_mac) {
-    if (using_sanitizer || enable_profiling || is_debug ||
-        current_cpu == "arm64") {
-      # Explicitly ask for frame pointers, otherwise:
-      # * Stacks may be missing for sanitizer and profiling builds.
-      # * Debug tcmalloc can crash (crbug.com/636489).
-      # * Stacks may be missing for arm64 crash dumps (crbug.com/391706).
-      cflags = [ "-fno-omit-frame-pointer" ]
-    }
-  }
-}
-
 # Default "optimization on" config.
 config("optimize") {
   if (is_win) {
@@ -840,33 +864,14 @@ config("optimize_debug") {
 # optimization and link-time code generation which is very expensive and should
 # be used sparingly.
 config("optimize_max") {
-  ldflags = common_optimize_on_ldflags
   if (is_win) {
     # Favor speed over size, /O2 must be before the common flags. The GYP
     # build also specifies /Ot, /Oi, and /GF, but these are implied by /O2.
     cflags = [ "/O2" ] + common_optimize_on_cflags
-    cflags += [
-      "/GL",  # Whole program optimization.
-
-      # Disable Warning 4702 ("Unreachable code") for the WPO/PGO builds.
-      # Probably anything that this would catch that wouldn't be caught in a
-      # normal build isn't going to actually be a bug, so the incremental
-      # value of C4702 for PGO builds is likely very small.
-      "/wd4702",
-    ]
-
-    ldflags += [
-      "/LTCG",  # Link-time code generation.
-
-      # Set the number of LTCG code-gen threads to eight. The default is four.
-      # This gives a 5-10% link speedup.
-      "/cgthreads:8",
-    ]
-
-    arflags = [ "/LTCG" ]
   } else {
     cflags = [ "-O3" ] + common_optimize_on_cflags
   }
+  ldflags = common_optimize_on_ldflags
 }
 
 # The default optimization applied to all targets. This will be equivalent to
@@ -876,6 +881,60 @@ config("default_optimization") {
     configs = [ ":optimize_debug" ]
   } else {
     configs = [ ":optimize" ]
+  }
+}
+
+config("lto") {
+  if (is_win && !is_clang) {
+    cflags = [
+      "/GL",  # Whole program optimization.
+
+      # Disable Warning 4702 ("Unreachable code") for the WPO/PGO builds.
+      # Probably anything that this would catch that wouldn't be caught in a
+      # normal build isn't going to actually be a bug, so the incremental
+      # value of C4702 for PGO builds is likely very small.
+      "/wd4702",
+    ]
+
+    ldflags = [
+      "/LTCG",  # Link-time code generation.
+
+      # Set the number of LTCG code-gen threads to eight. The default is four.
+      # This gives a 5-10% link speedup.
+      "/cgthreads:8",
+    ]
+
+    arflags = [ "/LTCG" ]
+  } else if (!is_win) {
+    cflags = [ "-flto" ]
+    ldflags = [ "-flto" ]
+
+    # Apply a lower LTO optimization level as the default is too slow.
+    if (is_linux) {
+      if (use_lld) {
+        ldflags += [ "-Wl,--lto-O1" ]
+      } else {
+        ldflags += [ "-Wl,-plugin-opt,O1" ]
+      }
+    } else if (is_mac) {
+      ldflags += [ "-Wl,-mllvm,-O1" ]
+    }
+
+    # Work-around for http://openradar.appspot.com/20356002
+    if (is_mac) {
+      ldflags += [ "-Wl,-all_load" ]
+    }
+
+    # Allows the linker to apply ICF to the LTO object file. Also, when
+    # targeting ARM, without this flag, LTO produces a .text section that is
+    # larger than the maximum call displacement, preventing the linker from
+    # relocating calls (http://llvm.org/PR22999).
+    if (is_linux) {
+      ldflags += [ "-Wl,-plugin-opt,-function-sections" ]
+    }
+
+    cflags += [ "-fwhole-program-vtables" ]
+    ldflags += [ "-fwhole-program-vtables" ]
   }
 }
 
