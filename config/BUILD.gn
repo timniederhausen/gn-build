@@ -933,8 +933,10 @@ config("lto") {
       ldflags += [ "-Wl,-plugin-opt,-function-sections" ]
     }
 
-    cflags += [ "-fwhole-program-vtables" ]
-    ldflags += [ "-fwhole-program-vtables" ]
+    if (is_clang && clang_version >= 30900) {
+      cflags += [ "-fwhole-program-vtables" ]
+      ldflags += [ "-fwhole-program-vtables" ]
+    }
   }
 }
 
