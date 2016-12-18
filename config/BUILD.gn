@@ -909,17 +909,6 @@ config("lto") {
     cflags = [ "-flto" ]
     ldflags = [ "-flto" ]
 
-    # Apply a lower LTO optimization level as the default is too slow.
-    if (is_linux) {
-      if (use_lld) {
-        ldflags += [ "-Wl,--lto-O1" ]
-      } else {
-        ldflags += [ "-Wl,-plugin-opt,O1" ]
-      }
-    } else if (is_mac) {
-      ldflags += [ "-Wl,-mllvm,-O1" ]
-    }
-
     # Work-around for http://openradar.appspot.com/20356002
     if (is_mac) {
       ldflags += [ "-Wl,-all_load" ]
@@ -929,7 +918,7 @@ config("lto") {
     # targeting ARM, without this flag, LTO produces a .text section that is
     # larger than the maximum call displacement, preventing the linker from
     # relocating calls (http://llvm.org/PR22999).
-    if (is_linux) {
+    if (is_linux && is_clang) {
       ldflags += [ "-Wl,-plugin-opt,-function-sections" ]
     }
 
