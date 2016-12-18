@@ -122,9 +122,6 @@ declare_args() {
   # separate flags.
   is_official_build = false
 
-  # Debug build. Enabling official builds automatically sets is_debug to false.
-  is_debug = !is_official_build
-
   # Set to true when compiling with the Clang compiler. Typically this is used
   # to configure warnings.
   is_clang = false
@@ -138,6 +135,11 @@ declare_args() {
   host_toolchain = ""
 
   # DON'T ADD MORE FLAGS HERE. Read the comment above.
+}
+
+declare_args() {
+  # Debug build. Enabling official builds automatically sets is_debug to false.
+  is_debug = !is_official_build
 }
 
 # ==============================================================================
