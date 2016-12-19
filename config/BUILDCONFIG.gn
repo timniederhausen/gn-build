@@ -122,8 +122,7 @@ declare_args() {
   # separate flags.
   is_official_build = false
 
-  # Set to true when compiling with the Clang compiler. Typically this is used
-  # to configure warnings.
+  # Set to true when compiling with the Clang compiler.
   is_clang = false
 
   # Allows the path to a custom target toolchain to be injected as a single
@@ -275,11 +274,9 @@ default_compiler_configs = [
   "//build/config:stackrealign",
   "//build/config:compiler_arm_fpu",
   "//build/config:compiler_arm_thumb",
-  "//build/config:default_warnings",
   "//build/config:default_optimization",
   "//build/config:default_stack_frames",
   "//build/config:default_symbols",
-  "//build/config:clang_warnings",
   "//build/config:c++11",
   "//build/config:rtti",
   "//build/config:exceptions",
