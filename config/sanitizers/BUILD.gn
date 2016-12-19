@@ -117,9 +117,8 @@ config("default_sanitizer_flags") {
       ]
     }
     if (is_asan) {
-      cflags += [
-        "-fsanitize=address",
-      ]
+      cflags += [ "-fsanitize=address" ]
+
       # http://crbug.com/352073
       cflags += [
         "-mllvm",
@@ -130,9 +129,7 @@ config("default_sanitizer_flags") {
       cflags += [ "-fsanitize=leak" ]
     }
     if (is_tsan) {
-      cflags += [
-        "-fsanitize=thread",
-      ]
+      cflags += [ "-fsanitize=thread" ]
     }
     if (is_msan) {
       cflags += [
@@ -169,9 +166,7 @@ config("default_sanitizer_flags") {
       ]
     }
     if (is_ubsan_vptr) {
-      cflags += [
-        "-fsanitize=vptr",
-      ]
+      cflags += [ "-fsanitize=vptr" ]
     }
     if (is_lto) {
       cflags += [ "-flto" ]

@@ -45,9 +45,9 @@ if (gcc_version == 0 && !is_clang) {
 
 if (clang_version == 0 && is_clang) {
   clang_version = exec_script("toolchain.py",
-                            [
-                              "get_clang_version",
-                              clang_cc,
-                            ],
-                            "trim value")
+                              [
+                                "get_clang_version",
+                                clang_cc,
+                              ],
+                              "trim value")
 }

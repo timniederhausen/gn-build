@@ -6,7 +6,7 @@ import("//build/config/compiler.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/toolchain.gni")
 
-if (current_cpu == "arm") {
+if (current_cpu == "arm" || current_cpu == "arm64") {
   import("//build/config/arm.gni")
 }
 
@@ -63,6 +63,16 @@ declare_args() {
 
   # Enable fatal linker warnings.
   fatal_linker_warnings = true
+
+  # AFDO (Automatic Feedback Directed Optimizer) is a form of profile-guided
+  # optimization that GCC supports. It used by ChromeOS in their official
+  # builds. To use it, set auto_profile_path to the path to a file containing
+  # the needed gcov profiling data.
+  auto_profile_path = ""
+
+  # Optimize for coverage guided fuzzing (balance between speed and number of
+  # branches)
+  optimize_for_fuzzing = false
 }
 
 # compiler ---------------------------------------------------------------------
@@ -150,14 +160,16 @@ config("compiler") {
   # Non-Mac Posix compiler flags setup.
   # -----------------------------------
   if (is_posix && !is_mac) {
-    if (enable_profiling && !is_debug) {
-      cflags += [ "-g" ]
+    if (enable_profiling) {
+      if (!is_debug) {
+        cflags += [ "-g" ]
 
-      if (enable_full_stack_frames_for_profiling) {
-        cflags += [
-          "-fno-inline",
-          "-fno-optimize-sibling-calls",
-        ]
+        if (enable_full_stack_frames_for_profiling) {
+          cflags += [
+            "-fno-inline",
+            "-fno-optimize-sibling-calls",
+          ]
+        }
       }
     }
 
@@ -186,8 +198,21 @@ config("compiler") {
       "-Wl,-z,now",
       "-Wl,-z,relro",
     ]
-    if (!using_sanitizer && !use_cfi_diag) {
-      ldflags += [ "-Wl,-z,defs" ]
+    if (!using_sanitizer) {
+      if (!use_cfi_diag) {
+        ldflags += [ "-Wl,-z,defs" ]
+      }
+
+      # Functions interposed by the sanitizers can make ld think
+      # that some libraries aren't needed when they actually are,
+      # http://crbug.com/234010. As workaround, disable --as-needed.
+      # TODO(pcc): Fix linker bug which requires us to link pthread
+      # unconditionally here (crbug.com/623236).
+      ldflags += [
+        "-Wl,--no-as-needed",
+        "-lpthread",
+        "-Wl,--as-needed",
+      ]
     }
   }
 
@@ -230,6 +255,13 @@ config("compiler") {
     cflags += [ "-fdiagnostics-color" ]
   }
 
+  # Print absolute paths in diagnostics. There is no precedent for doing this
+  # on Linux/Mac (GCC doesn't support it), but MSVC does this with /FC and
+  # Windows developers rely on it (crbug.com/636109) so only do this on Windows.
+  if (is_clang && is_win && clang_version >= 40000) {
+    cflags += [ "-fdiagnostics-absolute-paths" ]
+  }
+
   # Makes builds independent of absolute file path.
   # clang-cl (used if is_win) doesn't expose this flag.
   if (is_clang && !is_win && clang_version >= 30800) {
@@ -261,6 +293,16 @@ config("compiler") {
   }
 }
 
+# This is separate from :compiler (and not even a sub-config there)
+# so that some targets can remove it from the list with:
+#   configs -= [ "//build/config:pthread" ]
+config("pthread") {
+  if (is_linux) {
+    cflags = [ "-pthread" ]
+    ldflags = [ "-pthread" ]
+  }
+}
+
 # This provides the basic options to select the target CPU and ABI.
 # It is factored out of "compiler" so that special cases can use this
 # without using everything that "compiler" brings in.  Options that
@@ -284,55 +326,51 @@ config("compiler_cpu_abi") {
       ldflags += [ "-m32" ]
     } else if (current_cpu == "arm") {
       if (is_clang) {
-        cflags += [
-          "-target",
-          "arm-linux-gnueabihf",
-        ]
-        ldflags += [
-          "-target",
-          "arm-linux-gnueabihf",
-        ]
+        cflags += [ "--target=arm-linux-gnueabihf" ]
+        ldflags += [ "--target=arm-linux-gnueabihf" ]
       }
-      cflags += [
-        "-march=$arm_arch",
-        "-mfloat-abi=$arm_float_abi",
-      ]
-      if (arm_use_thumb) {
-        cflags += [ "-mthumb" ]
+      if (!is_nacl) {
+        cflags += [
+          "-march=$arm_arch",
+          "-mfloat-abi=$arm_float_abi",
+        ]
       }
       if (arm_tune != "") {
         cflags += [ "-mtune=$arm_tune" ]
       }
-    } else if (current_cpu == "mipsel") {
+    } else if (current_cpu == "arm64") {
+      if (is_clang) {
+        cflags += [ "--target=aarch64-linux-gnu" ]
+        ldflags += [ "--target=aarch64-linux-gnu" ]
+      }
+    } else if (current_cpu == "mipsel" && !is_nacl) {
       if (mips_arch_variant == "r6") {
         if (is_clang) {
           cflags += [
-            "-target",
-            "mipsel-linux-gnu",
+            "--target=mipsel-linux-gnu",
             "-march=mips32r6",
           ]
-          ldflags += [
-            "-target",
-            "mipsel-linux-gnu",
-          ]
+          ldflags += [ "--target=mipsel-linux-gnu" ]
         } else {
           cflags += [
             "-mips32r6",
             "-Wa,-mips32r6",
           ]
         }
+        if (mips_use_msa == true) {
+          cflags += [
+            "-mmsa",
+            "-mfp64",
+          ]
+        }
       } else if (mips_arch_variant == "r2") {
         if (is_clang) {
           cflags += [
-            "-target",
-            "mipsel-linux-gnu",
+            "--target=mipsel-linux-gnu",
             "-march=mipsel",
             "-mcpu=mips32r2",
           ]
-          ldflags += [
-            "-target",
-            "mipsel-linux-gnu",
-          ]
+          ldflags += [ "--target=mipsel-linux-gnu" ]
         } else {
           cflags += [
             "-mips32r2",
@@ -345,15 +383,11 @@ config("compiler_cpu_abi") {
       } else if (mips_arch_variant == "r1") {
         if (is_clang) {
           cflags += [
-            "-target",
-            "mipsel-linux-gnu",
+            "--target=mipsel-linux-gnu",
             "-march=mipsel",
             "-mcpu=mips32",
           ]
-          ldflags += [
-            "-target",
-            "mipsel-linux-gnu",
-          ]
+          ldflags += [ "--target=mipsel-linux-gnu" ]
         } else {
           cflags += [
             "-mips32",
@@ -371,11 +405,19 @@ config("compiler_cpu_abi") {
       cflags += [ "-m${mips_float_abi}-float" ]
     } else if (current_cpu == "mips64el") {
       if (mips_arch_variant == "r6") {
-        cflags += [
-          "-mips64r6",
-          "-Wa,-mips64r6",
-        ]
-        ldflags += [ "-mips64r6" ]
+        if (!is_clang) {
+          cflags += [
+            "-mips64r6",
+            "-Wa,-mips64r6",
+          ]
+          ldflags += [ "-mips64r6" ]
+        }
+        if (mips_use_msa == true) {
+          cflags += [
+            "-mmsa",
+            "-mfp64",
+          ]
+        }
       } else if (mips_arch_variant == "r2") {
         cflags += [
           "-mips64r2",
@@ -399,13 +441,13 @@ config("compiler_codegen") {
 # so that some targets can remove it from the list with:
 #   configs -= [ "//build/config/compiler:stackrealign" ]
 config("stackrealign") {
-  if (current_cpu == "x86" && is_freebsd) {
-    if (is_clang) {
+  if (current_cpu == "x86") {
+    if (is_clang && (is_freebsd || is_linux)) {
       cflags = [
         "-mstack-alignment=16",
         "-mstackrealign",
       ]
-    } else {
+    } else if (!is_clang && is_freebsd) {
       # The FreeBSD ABI only mandates 4 byte stack alignment.
       # Linux on the other hand provides 16 byte alignment,
       # which GCC/Clang require.
@@ -425,6 +467,25 @@ config("compiler_arm_fpu") {
   if (current_cpu == "arm") {
     cflags = [ "-mfpu=$arm_fpu" ]
     asmflags = cflags
+  }
+}
+
+config("compiler_arm_thumb") {
+  if (current_cpu == "arm" && arm_use_thumb && is_posix &&
+      !(is_mac || is_ios || is_nacl)) {
+    cflags = [ "-mthumb" ]
+    if (is_android && !is_clang) {
+      # Clang doesn't support this option.
+      cflags += [ "-mthumb-interwork" ]
+    }
+  }
+}
+
+config("compiler_arm") {
+  if (current_cpu == "arm" && is_chromeos) {
+    # arm is normally the default mode for clang, but on chromeos a wrapper
+    # is used to pass -mthumb, and therefor change the default.
+    cflags = [ "-marm" ]
   }
 }
 
@@ -563,6 +624,7 @@ config("default_warnings") {
       "/wd4995",  # 'X': name was marked as #pragma deprecated
       "/wd4996",  # Deprecated function warning.
       "/wd4800",  # Disable warning when forcing value to bool.
+
       #"/wd4324",  #'struct_name' : structure was padded due to __declspec(align())
     ]
   } else {
@@ -608,16 +670,14 @@ config("default_warnings") {
     cflags += [
       "-Wloop-analysis",
 
-      "-Wno-unused-local-typedef", # unused typedef 'foo'
+      "-Wno-unused-local-typedef",  # unused typedef 'foo'
 
       # Warns on switches on enums that cover all enum values but
       # also contain a default: branch.
       "-Wno-covered-switch-default",
     ]
   } else if (!is_win) {
-    cflags += [
-      "-Wno-unused-local-typedefs", # unused typedef 'foo'
-    ]
+    cflags += [ "-Wno-unused-local-typedefs" ]  # unused typedef 'foo'
   }
 }
 
@@ -682,9 +742,9 @@ config("no_rtti") {
   }
 }
 
-# rtti ------------------------------------------------------------------------
+# exceptions-------------------------------------------------------------------
 #
-# Allows turning Run-Time Type Identification on or off.
+# Allows turning exceptions on or off.
 
 config("exceptions") {
   if (is_win) {
@@ -759,7 +819,7 @@ if (is_win) {
     ]
   }
   common_optimize_on_ldflags = [
-    "/OPT:ICF", # Redundant COMDAT folding.
+    "/OPT:ICF",  # Redundant COMDAT folding.
     "/OPT:REF",  # Remove unreferenced data.
   ]
 } else {
@@ -815,7 +875,6 @@ config("no_optimize") {
     cflags = [
       "/Od",  # Disable optimization.
       "/Ob0",  # Disable all inlining (on by default).
-      "/RTC1",  # Runtime checks for stack frame and uninitialized variables.
     ]
   } else {
     cflags = [ "-O0" ]
@@ -826,12 +885,8 @@ config("no_optimize") {
 # Optimization options suited for debug builds.
 config("optimize_debug") {
   if (is_win) {
-    cflags = [
-      "/RTC1",  # Runtime checks for stack frame and uninitialized variables.
-    ]
-
     ldflags = [
-      "/OPT:ICF", # Redundant COMDAT folding.
+      "/OPT:ICF",  # Redundant COMDAT folding.
       "/OPT:REF",  # Remove unreferenced data.
     ]
   } else {
@@ -869,11 +924,20 @@ config("optimize_max") {
   ldflags = common_optimize_on_ldflags
 }
 
+config("optimize_fuzzing") {
+  cflags = [ "-O1" ] + common_optimize_on_cflags
+  ldflags = common_optimize_on_ldflags
+  visibility = [ ":default_optimization" ]
+}
+
 # The default optimization applied to all targets. This will be equivalent to
 # either "optimize" or "optimize_debug", depending on the build flags.
 config("default_optimization") {
   if (is_debug) {
     configs = [ ":optimize_debug" ]
+  } else if (optimize_for_fuzzing) {
+    assert(!is_win, "Fuzzing optimize level not supported on Windows")
+    configs = [ ":optimize_fuzzing" ]
   } else {
     configs = [ ":optimize" ]
   }
@@ -901,8 +965,22 @@ config("lto") {
 
     arflags = [ "/LTCG" ]
   } else if (!is_win) {
-    cflags = [ "-flto" ]
-    ldflags = [ "-flto" ]
+    if (use_thin_lto) {
+      cflags += [ "-flto=thin" ]
+      ldflags += [ "-flto=thin" ]
+
+      # Limit the parallelism to avoid too agressive competition between
+      # linker jobs. This is still suboptimal to a potential dynamic
+      # resource allocation scheme, but should be good enough.
+      if (use_lld) {
+        ldflags += [ "-Wl,--thinlto-jobs=8" ]
+      } else {
+        ldflags += [ "-Wl,-plugin-opt,jobs=8" ]
+      }
+    } else {
+      cflags = [ "-flto" ]
+      ldflags = [ "-flto" ]
+    }
 
     # Work-around for http://openradar.appspot.com/20356002
     if (is_mac) {
@@ -917,10 +995,18 @@ config("lto") {
       ldflags += [ "-Wl,-plugin-opt,-function-sections" ]
     }
 
-    if (is_clang && clang_version >= 30900) {
+    if (!use_thin_lto && is_clang && clang_version >= 30900) {
       cflags += [ "-fwhole-program-vtables" ]
       ldflags += [ "-fwhole-program-vtables" ]
     }
+  }
+}
+
+# GCC supports a form of profile-guided optimization called AFDO.
+# or we remove tcmalloc or we stop using AFDO.
+config("afdo") {
+  if (auto_profile_path != "" && current_toolchain == default_toolchain) {
+    cflags = [ "-fauto-profile=${auto_profile_path}" ]
   }
 }
 
@@ -939,6 +1025,7 @@ config("lto") {
 config("symbols") {
   if (is_win) {
     cflags = [ "/Zi" ]  # Produce PDB file, no edit and continue.
+
     if (is_win_fastlink && msc_full_ver >= 190000000) {
       # Tell VS 2015+ to create a PDB that references debug
       # information in .obj and .lib files instead of copying
@@ -1018,9 +1105,7 @@ if (is_mac) {
 # Debug/release ----------------------------------------------------------------
 
 config("debug") {
-  defines = [
-    "_DEBUG",
-  ]
+  defines = [ "_DEBUG" ]
 
   if (is_win) {
     if (!enable_iterator_debugging) {
@@ -1043,9 +1128,7 @@ config("release") {
 # This config defines the default libraries applied to all targets.
 config("default_libs") {
   if (is_win) {
-    libs = [
-      "kernel32.lib",
-    ]
+    libs = [ "kernel32.lib" ]
   } else if (is_mac) {
     libs = [
       "AppKit.framework",

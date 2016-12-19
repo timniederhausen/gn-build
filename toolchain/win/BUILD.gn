@@ -9,6 +9,22 @@ import("//build/toolchain/toolchain.gni")
 # Should only be running on Windows.
 assert(is_win)
 
+declare_args() {
+  # Root directory that will store the MSVC link repro. This should only be
+  # used for debugging purposes on the builders where a MSVC linker flakyness
+  # has been observed. The targets for which a link repro should be generated
+  # should add somethink like this to their configuration:
+  #   if (linkrepro_root_dir != "") {
+  #     ldflags = ["/LINKREPRO:" + linkrepro_root_dir + "/" + target_name]
+  #   }
+  #
+  # Note that doing a link repro uses a lot of disk space and slows down the
+  # build, so this shouldn't be enabled on too many targets.
+  #
+  # See crbug.com/669854.
+  linkrepro_root_dir = ""
+}
+
 # Parameters:
 #   environment: File name of environment file.
 #
@@ -179,7 +195,6 @@ template("msvc_toolchain") {
 
       link_wrapper =
           rebase_path("//build/toolchain/win/link_wrapper.py", root_build_dir)
-
       command = "$python_path $link_wrapper $env False $link /nologo /IMPLIB:$libname /DLL /OUT:$dllname /PDB:$pdbname @$rspfile"
 
       default_output_extension = ".dll"
@@ -215,7 +230,6 @@ template("msvc_toolchain") {
 
       link_wrapper =
           rebase_path("//build/toolchain/win/link_wrapper.py", root_build_dir)
-
       command = "$python_path $link_wrapper $env False $link /nologo /DLL /OUT:$dllname /PDB:$pdbname @$rspfile"
 
       default_output_extension = ".dll"
@@ -242,8 +256,17 @@ template("msvc_toolchain") {
 
       link_wrapper =
           rebase_path("//build/toolchain/win/link_wrapper.py", root_build_dir)
-
       command = "$python_path $link_wrapper $env False $link /nologo /OUT:$exename /PDB:$pdbname @$rspfile"
+
+      if (linkrepro_root_dir != "") {
+        # Create the directory that will receive the link repro for this target
+        # if needed. Note that this will create one directory per link target
+        # even if this target doesn't generate a link repro. This is necessary
+        # because the linker doesn't generate the directory specified to the
+        # /LINKREPRO flag if it doesn't exist.
+        linkrepro_dir = "$linkrepro_root_dir\\{{target_output_name}}"
+        command = "cmd /c mkdir $linkrepro_dir && $command"
+      }
 
       default_output_extension = ".exe"
       default_output_dir = "{{root_out_dir}}"
@@ -332,6 +355,7 @@ if (target_os == "winrt_81" || target_os == "winrt_81_phone" ||
     msvc_toolchain("winrt_x86") {
       environment = "environment.winrt_x86"
       cl = "\"${vc_bin_dir}/cl.exe\""
+
       toolchain_args = {
         current_cpu = "x86"
         is_clang = false

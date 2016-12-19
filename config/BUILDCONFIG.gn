@@ -142,6 +142,8 @@ declare_args() {
   is_debug = !is_official_build
 }
 
+assert(!(is_debug && is_official_build), "Can't do official debug builds")
+
 # ==============================================================================
 # TOOLCHAIN SETUP
 # ==============================================================================
@@ -267,9 +269,12 @@ if (current_os == "win" || current_os == "winrt_81" ||
 
 # Holds all configs used for running the compiler.
 default_compiler_configs = [
+  "//build/config:afdo",
   "//build/config:compiler",
+  "//build/config:pthread",
   "//build/config:stackrealign",
   "//build/config:compiler_arm_fpu",
+  "//build/config:compiler_arm_thumb",
   "//build/config:default_warnings",
   "//build/config:default_optimization",
   "//build/config:default_stack_frames",
@@ -284,6 +289,7 @@ default_compiler_configs = [
 ]
 if (is_win) {
   default_compiler_configs += [
+    "//build/config/win:default_crt",
     "//build/config/win:lean_and_mean",
     "//build/config/win:nominmax",
     "//build/config/win:winver",
@@ -314,9 +320,12 @@ set_defaults("source_set") {
 # loadable modules, executables) to avoid duplication below.
 if (is_win) {
   # Windows linker setup for EXEs and DLLs.
+  # Many targets remove these configs, so they are not contained within
+  # //build/config:executable_config for easy removal.
   _linker_configs = [
     "//build/config/win:sdk_link",
     "//build/config/win:common_linker_setup",
+    "//build/config/win:default_incremental_linking",
 
     # Default to console-mode apps. Most of our targets are tests and such
     # that shouldn't use the windows subsystem.
@@ -343,10 +352,6 @@ if (is_mac) {
 }
 
 set_defaults("executable") {
-  configs = default_executable_configs
-}
-
-set_defaults("test") {
   configs = default_executable_configs
 }
 

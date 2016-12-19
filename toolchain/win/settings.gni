@@ -65,6 +65,7 @@ toolchain_data = exec_script("toolchain.py",
                                visual_studio_version,
                                visual_studio_path,
                                sys_include_prefix,
+
                                # Don't use clang_base_path directly, so we can
                                # skip clang detection if not needed
                                # (i.e. !is_clang).
