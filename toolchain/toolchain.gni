@@ -10,16 +10,7 @@ declare_args() {
   # NOTE: This is currently only used on Windows!
   clang_base_path = ""
 
-  # Enable Link Time Optimization in optimized builds (output programs run
-  # faster, but linking is up to 5-20x slower).
-  # Note: use target_os == "linux" rather than is_linux so that it does not
-  # apply to host_toolchain when target_os="android".
-  allow_posix_link_time_opt = false
-
-  # Set to true to use lld, the LLVM linker. This flag may be used on Windows
-  # with the shipped LLVM toolchain, or on Linux with a self-built top-of-tree
-  # LLVM toolchain (see llvm_force_head_revision in
-  # build/config/compiler/BUILD.gn).
+  # Set to true to use lld, the LLVM linker.
   use_lld = false
 
   # How many symbols to include in the build. This affects the performance of
