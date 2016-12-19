@@ -393,15 +393,6 @@ config("compiler_cpu_abi") {
 # for particular Chromium code or for working around particular
 # compiler bugs (or the combination of the two).
 config("compiler_codegen") {
-  if (is_posix && current_cpu == "x86") {
-    cflags = [
-      # Intel Core 2 CPU with 64-bit extensions, MMX, SSE, SSE2, SSE3 and SSSE3 instruction set support.
-      "-march=core2",
-
-      # Use SSE for floating point operations
-      "-mfpmath=sse",
-    ]
-  }
 }
 
 # This is separate from :compiler_codegen (and not even a sub-config there)
