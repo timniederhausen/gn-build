@@ -654,12 +654,16 @@ config("c++11") {
 config("c++14") {
   if (!is_win) {
     cflags_cc = [ "-std=c++14" ]
+  } else if (is_clang || msc_full_ver >= 190024210) {
+    cflags_cc = [ "/std:c++14" ]
   }
 }
 
 config("c++latest") {
   if (!is_win) {
     cflags_cc = [ "-std=c++1z" ]
+  } else if (is_clang || msc_full_ver >= 190024210) {
+    cflags_cc = [ "/std:c++latest" ]
   }
 }
 
