@@ -29,7 +29,7 @@ declare_args() {
 
   # Enable Link Time Optimization in optimized builds (output programs run
   # faster, but linking is up to 5-20x slower).
-  enable_lto = false
+  enable_lto = is_official_build && is_win && !is_clang
 
   # Whether or not we should turn on incremental LTCG. Only affects the VS
   # Windows build.
@@ -801,6 +801,8 @@ config("default_optimization") {
   } else if (optimize_for_fuzzing) {
     assert(!is_win, "Fuzzing optimize level not supported on Windows")
     configs = [ ":optimize_fuzzing" ]
+  } else if (is_official_build) {
+    configs = [ ":optimize_max" ]
   } else {
     configs = [ ":optimize" ]
   }
