@@ -141,8 +141,9 @@ declare_args() {
   # every toolchain can pass through the "global" value via toolchain_args().
   host_toolchain = ""
 
-  # Label of the external libraries prefix.
-  # Third-party dependencies are confined to this directory.
+  # Label of the external projects directory.
+  # By convention, all 3rd-party projects should end up in this directory, so they
+  # can depend on each other (e.g. $external/mysql_connector -> $external/zlib)
   external = "//external"
 
   # DON'T ADD MORE FLAGS HERE. Read the comment above.
