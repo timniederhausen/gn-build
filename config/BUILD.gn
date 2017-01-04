@@ -16,8 +16,12 @@ if (current_cpu == "mipsel" || current_cpu == "mips64el") {
 
 if (is_win) {
   import("//build/toolchain/win/settings.gni")
-} else if (!is_mac) {
+} else if (!is_mac && !is_android) {
   import("//build/toolchain/posix/settings.gni")
+}
+
+if (is_android) {
+  import("//build/toolchain/android/settings.gni")
 }
 
 declare_args() {
@@ -107,6 +111,8 @@ config("compiler") {
   # smaller.
   if (is_win) {
     configs += [ "//build/config/win:compiler" ]
+  } else if (is_android) {
+    configs += [ "//build/config/android:compiler" ]
   } else if (is_mac) {
     configs += [ "//build/config/mac:compiler" ]
   }
@@ -144,7 +150,7 @@ config("compiler") {
       } else {
         cflags += [ "-fstack-protector" ]
       }
-    } else if (is_posix) {
+    } else if (is_posix && !is_android) {
       # https://outflux.net/blog/archives/2014/01/27/fstack-protector-strong/
       cflags += [ "-fstack-protector-strong" ]
     }
@@ -195,7 +201,7 @@ config("compiler") {
 
   # Linux/Android common flags setup.
   # ---------------------------------
-  if (is_linux) {
+  if (is_linux || is_android) {
     cflags += [
       "-fPIC",
       "-pipe",  # Use pipes for communicating between sub-processes. Faster.
@@ -215,13 +221,15 @@ config("compiler") {
       # Functions interposed by the sanitizers can make ld think
       # that some libraries aren't needed when they actually are,
       # http://crbug.com/234010. As workaround, disable --as-needed.
-      # TODO(pcc): Fix linker bug which requires us to link pthread
-      # unconditionally here (crbug.com/623236).
-      ldflags += [
-        "-Wl,--no-as-needed",
-        "-lpthread",
-        "-Wl,--as-needed",
-      ]
+      if (!is_android) {
+        # TODO(pcc): Fix linker bug which requires us to link pthread
+        # unconditionally here (crbug.com/623236).
+        ldflags += [
+          "-Wl,--no-as-needed",
+          "-lpthread",
+        ]
+      }
+      ldflags += [ "-Wl,--as-needed" ]
     }
   }
 
@@ -231,28 +239,56 @@ config("compiler") {
     ldflags += [ "-fuse-ld=lld" ]
   } else if (use_gold) {
     ldflags += [
-      "-B$gold_path",
-
       # Newer gccs and clangs support -fuse-ld, use the flag to force gold
       # selection.
       # gcc -- http://gcc.gnu.org/onlinedocs/gcc-4.8.0/gcc/Optimize-Options.html
       "-fuse-ld=gold",
-
-      # Experimentation found that using four linking threads
-      # saved ~20% of link time.
-      # https://groups.google.com/a/chromium.org/group/chromium-dev/browse_thread/thread/281527606915bb36
-      # Only apply this to the target linker, since the host
-      # linker might not be gold, but isn't used much anyway.
-      "-Wl,--threads",
-      "-Wl,--thread-count=4",
     ]
+
+    if (is_android) {
+      # Use -mstackrealign due to a bug on ia32 Jelly Bean.
+      # See crbug.com/521527
+      if (current_cpu == "x86") {
+        cflags += [ "-mstackrealign" ]
+      }
+    } else {
+      ldflags += [
+        # On Android, this isn't needed.  gcc in the NDK knows to look next to
+        # it with -fuse-ld=gold, and clang gets a --gcc-toolchain flag passed
+        # above.
+        "-B$gold_path",
+
+        # Experimentation found that using four linking threads
+        # saved ~20% of link time.
+        # https://groups.google.com/a/chromium.org/group/chromium-dev/browse_thread/thread/281527606915bb36
+        # Only apply this to the target linker, since the host
+        # linker might not be gold, but isn't used much anyway.
+        "-Wl,--threads",
+        "-Wl,--thread-count=4",
+      ]
+    }
 
     if (gdb_index) {
       ldflags += [ "-Wl,--gdb-index" ]
     }
+  }
 
-    if (!using_sanitizer) {
+  if (is_posix && (use_gold || use_lld) && !using_sanitizer &&
+      !(is_android && use_order_profiling)) {
+    # TODO(crbug.com/576197) - gcc on x86 platforms + gold + icf=all
+    # doesn't currently work on non-chromeos platforms.
+    # Additionally, on Android x86 --icf=safe seems to cause issues as well.
+    # Additionally, on cast Android x86, --icf=all causes issues.
+    if (is_android && current_cpu == "x86") {
+      ldflags += [ "-Wl,--icf=none" ]
+    } else if ((is_clang && !is_android) ||
+               (current_cpu != "x86" && current_cpu != "x64")) {
+      # TODO(thakis): Remove `!is_android` above once our gold has been rolled
+      # with the fix for https://sourceware.org/bugzilla/show_bug.cgi?id=17704
+      # merged.  See also https://crbug.com/663886
       ldflags += [ "-Wl,--icf=all" ]
+    } else if (!is_android || is_clang) {
+      ldflags += [ "-Wl,--icf=safe" ]
     }
   }
 
@@ -334,7 +370,7 @@ config("compiler_cpu_abi") {
       cflags += [ "-m32" ]
       ldflags += [ "-m32" ]
     } else if (current_cpu == "arm") {
-      if (is_clang) {
+      if (is_clang && !is_android) {
         cflags += [ "--target=arm-linux-gnueabihf" ]
         ldflags += [ "--target=arm-linux-gnueabihf" ]
       }
@@ -348,7 +384,7 @@ config("compiler_cpu_abi") {
         cflags += [ "-mtune=$arm_tune" ]
       }
     } else if (current_cpu == "arm64") {
-      if (is_clang) {
+      if (is_clang && !is_android) {
         cflags += [ "--target=aarch64-linux-gnu" ]
         ldflags += [ "--target=aarch64-linux-gnu" ]
       }
@@ -365,6 +401,12 @@ config("compiler_cpu_abi") {
             "-mips32r6",
             "-Wa,-mips32r6",
           ]
+          if (is_android) {
+            ldflags += [
+              "-mips32r6",
+              "-Wl,-melf32ltsmip",
+            ]
+          }
         }
         if (mips_use_msa == true) {
           cflags += [
@@ -374,12 +416,21 @@ config("compiler_cpu_abi") {
         }
       } else if (mips_arch_variant == "r2") {
         if (is_clang) {
-          cflags += [
-            "--target=mipsel-linux-gnu",
-            "-march=mipsel",
-            "-mcpu=mips32r2",
-          ]
-          ldflags += [ "--target=mipsel-linux-gnu" ]
+          if (is_android) {
+            cflags += [
+              "--target=mipsel-linux-android",
+              "-march=mipsel",
+              "-mcpu=mips32r2",
+            ]
+            ldflags += [ "--target=mipsel-linux-android" ]
+          } else {
+            cflags += [
+              "--target=mipsel-linux-gnu",
+              "-march=mipsel",
+              "-mcpu=mips32r2",
+            ]
+            ldflags += [ "--target=mipsel-linux-gnu" ]
+          }
         } else {
           cflags += [
             "-mips32r2",
@@ -391,12 +442,21 @@ config("compiler_cpu_abi") {
         }
       } else if (mips_arch_variant == "r1") {
         if (is_clang) {
-          cflags += [
-            "--target=mipsel-linux-gnu",
-            "-march=mipsel",
-            "-mcpu=mips32",
-          ]
-          ldflags += [ "--target=mipsel-linux-gnu" ]
+          if (is_android) {
+            cflags += [
+              "--target=mipsel-linux-android",
+              "-march=mipsel",
+              "-mcpu=mips32",
+            ]
+            ldflags += [ "--target=mipsel-linux-android" ]
+          } else {
+            cflags += [
+              "--target=mipsel-linux-gnu",
+              "-march=mipsel",
+              "-mcpu=mips32",
+            ]
+            ldflags += [ "--target=mipsel-linux-gnu" ]
+          }
         } else {
           cflags += [
             "-mips32",
@@ -414,7 +474,16 @@ config("compiler_cpu_abi") {
       cflags += [ "-m${mips_float_abi}-float" ]
     } else if (current_cpu == "mips64el") {
       if (mips_arch_variant == "r6") {
-        if (!is_clang) {
+        if (is_clang) {
+          if (is_android) {
+            cflags += [
+              "--target=mips64el-linux-android",
+              "-march=mips64el",
+              "-mcpu=mips64r6",
+            ]
+            ldflags += [ "--target=mips64el-linux-android" ]
+          }
+        } else {
           cflags += [
             "-mips64r6",
             "-Wa,-mips64r6",
@@ -444,6 +513,30 @@ config("compiler_cpu_abi") {
 # for particular Chromium code or for working around particular
 # compiler bugs (or the combination of the two).
 config("compiler_codegen") {
+  configs = []
+  cflags = []
+
+  if (is_posix && !is_mac) {
+    if (current_cpu == "arm") {
+      if (is_android && !is_clang) {
+        # Clang doesn't support these flags.
+        cflags += [
+          # The tree-sra optimization (scalar replacement for
+          # aggregates enabling subsequent optimizations) leads to
+          # invalid code generation when using the Android NDK's
+          # compiler (r5-r7). This can be verified using
+          # webkit_unit_tests' WTF.Checked_int8_t test.
+          "-fno-tree-sra",
+
+          # The following option is disabled to improve binary
+          # size and performance in gcc 4.9.
+          "-fno-caller-saves",
+        ]
+      }
+    }
+  }
+
+  asmflags = cflags
 }
 
 # This is separate from :compiler_codegen (and not even a sub-config there)
@@ -480,8 +573,7 @@ config("compiler_arm_fpu") {
 }
 
 config("compiler_arm_thumb") {
-  if (current_cpu == "arm" && arm_use_thumb && is_posix &&
-      !(is_mac || is_ios || is_nacl)) {
+  if (current_cpu == "arm" && arm_use_thumb && is_posix && !is_mac) {
     cflags = [ "-mthumb" ]
     if (is_android && !is_clang) {
       # Clang doesn't support this option.
@@ -491,11 +583,7 @@ config("compiler_arm_thumb") {
 }
 
 config("compiler_arm") {
-  if (current_cpu == "arm" && is_chromeos) {
-    # arm is normally the default mode for clang, but on chromeos a wrapper
-    # is used to pass -mthumb, and therefor change the default.
-    cflags = [ "-marm" ]
-  }
+  # no op
 }
 
 config("default_stack_frames") {
@@ -550,6 +638,8 @@ config("runtime_library") {
     configs += [ "//build/config/win:runtime_library" ]
   } else if (is_mac) {
     configs += [ "//build/config/mac:runtime_library" ]
+  } else if (is_android) {
+    configs += [ "//build/config/android:runtime_library" ]
   }
 
   if (is_posix) {
@@ -686,17 +776,19 @@ if (is_win) {
     "/OPT:REF",  # Remove unreferenced data.
   ]
 } else {
-  common_optimize_on_cflags = [
-    # Don't emit the GCC version ident directives, they just end up in the
-    # .comment section taking up binary size.
-    "-fno-ident",
-
-    # Put data and code in their own sections, so that unused symbols
-    # can be removed at link time with --gc-sections.
-    "-fdata-sections",
-    "-ffunction-sections",
-  ]
+  common_optimize_on_cflags = []
   common_optimize_on_ldflags = []
+
+  if (is_android) {
+    # TODO(jdduke) Re-enable on mips after resolving linking
+    # issues with libc++ (crbug.com/456380).
+    if (current_cpu != "mipsel" && current_cpu != "mips64el") {
+      common_optimize_on_ldflags += [
+        # Warn in case of text relocations.
+        "-Wl,--warn-shared-textrel",
+      ]
+    }
+  }
 
   if (is_mac) {
     if (symbol_level == 2) {
@@ -704,20 +796,25 @@ if (is_win) {
       common_optimize_on_ldflags += [ "-Wl,-dead_strip" ]
     }
   } else {
-    # Non-Mac Posix linker flags.
+    # Non-Mac Posix flags.
+
+    common_optimize_on_cflags += [
+      # Don't emit the GCC version ident directives, they just end up in the
+      # .comment section taking up binary size.
+      "-fno-ident",
+
+      # Put data and code in their own sections, so that unused symbols
+      # can be removed at link time with --gc-sections.
+      "-fdata-sections",
+      "-ffunction-sections",
+    ]
+
     common_optimize_on_ldflags += [
       # Specifically tell the linker to perform optimizations.
       # See http://lwn.net/Articles/192624/ .
       "-Wl,-O1",
       "-Wl,--gc-sections",
     ]
-
-    if (!using_sanitizer) {
-      # Functions interposed by the sanitizers can make ld think
-      # that some libraries aren't needed when they actually are,
-      # http://crbug.com/234010. As workaround, disable --as-needed.
-      common_optimize_on_ldflags += [ "-Wl,--as-needed" ]
-    }
   }
 }
 
@@ -1004,6 +1101,11 @@ config("release") {
 config("default_libs") {
   if (is_win) {
     libs = [ "kernel32.lib" ]
+  } else if (is_android) {
+    libs = [
+      "dl",
+      "m",
+    ]
   } else if (is_mac) {
     libs = [
       "AppKit.framework",

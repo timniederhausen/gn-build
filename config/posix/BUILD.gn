@@ -1,3 +1,5 @@
+import("//build/toolchain/sysroot.gni")
+
 assert(is_posix)
 
 # This is included by reference in the //build/config/compiler config that
@@ -19,6 +21,14 @@ config("compiler") {
 # that is Posix-only. Please see that target for advice on what should go in
 # :runtime_library vs. :compiler.
 config("runtime_library") {
+  if (!is_mac && sysroot != "") {
+    # Pass the sysroot to all C compiler variants, the assembler, and linker.
+    cflags = [ "--sysroot=" + rebase_path(sysroot, root_build_dir) ]
+    asmflags = cflags
+    ldflags = cflags
+
+    # TODO: Need to get some linker flags out of the sysroot.
+  }
 }
 
 # Settings for executables.

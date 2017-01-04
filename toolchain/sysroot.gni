@@ -1,0 +1,38 @@
+# Copyright (c) 2013 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This header file defines the "sysroot" variable which is the absolute path
+# of the sysroot. If no sysroot applies, the variable will be an empty string.
+
+declare_args() {
+  # The absolute path of the sysroot that is applied when compiling using
+  # the target toolchain.
+  target_sysroot = ""
+
+  use_sysroot = false
+}
+
+if (current_os == target_os && current_cpu == target_cpu &&
+    target_sysroot != "") {
+  sysroot = target_sysroot
+} else if (is_android) {
+  import("//build/toolchain/android/settings.gni")
+  if (current_cpu == "x86") {
+    sysroot = "$android_ndk_root/$x86_android_sysroot_subdir"
+  } else if (current_cpu == "arm") {
+    sysroot = "$android_ndk_root/$arm_android_sysroot_subdir"
+  } else if (current_cpu == "mipsel") {
+    sysroot = "$android_ndk_root/$mips_android_sysroot_subdir"
+  } else if (current_cpu == "x64") {
+    sysroot = "$android_ndk_root/$x86_64_android_sysroot_subdir"
+  } else if (current_cpu == "arm64") {
+    sysroot = "$android_ndk_root/$arm64_android_sysroot_subdir"
+  } else if (current_cpu == "mips64el") {
+    sysroot = "$android_ndk_root/$mips64_android_sysroot_subdir"
+  } else {
+    sysroot = ""
+  }
+} else {
+  sysroot = ""
+}

@@ -51,7 +51,15 @@ if (target_os == "") {
 }
 
 if (target_cpu == "") {
-  target_cpu = host_cpu
+  if (target_os == "android") {
+    # If we're building for Android, we should assume that we want to
+    # build for ARM by default, not the host_cpu (which is likely x64).
+    # This allows us to not have to specify both target_os and target_cpu
+    # on the command line.
+    target_cpu = "arm"
+  } else {
+    target_cpu = host_cpu
+  }
 }
 
 if (current_cpu == "") {
@@ -172,9 +180,9 @@ if (host_toolchain == "") {
     # On Windows always use the target CPU for host builds. On the
     # configurations we support this will always work and it saves build steps.
     if (is_clang) {
-      host_toolchain = "//build/toolchain/win:clang_$target_cpu"
+      host_toolchain = "//build/toolchain/win:clang_$host_cpu"
     } else {
-      host_toolchain = "//build/toolchain/win:$target_cpu"
+      host_toolchain = "//build/toolchain/win:$host_cpu"
     }
   } else {
     if (target_os != host_os) {
@@ -193,7 +201,13 @@ if (host_toolchain == "") {
 
 _default_toolchain = ""
 
-if (target_os == "mac") {
+if (target_os == "android") {
+  if (is_clang) {
+    _default_toolchain = "//build/toolchain/android:android_clang_$target_cpu"
+  } else {
+    _default_toolchain = "//build/toolchain/android:android_$target_cpu"
+  }
+} else if (target_os == "mac") {
   assert(host_os == "mac", "Mac cross-compiles are unsupported.")
   _default_toolchain = host_toolchain
 } else if (target_os == "win") {
@@ -230,30 +244,44 @@ if (custom_toolchain != "") {
 # We set these various is_FOO booleans for convenience in writing OS-based
 # conditions.
 #
-# - is_linux, is_mac, is_freebsd, and is_win should be obvious.
+# - is_android, is_mac, is_freebsd, and is_win should be obvious.
 # - is_posix is true for mac and any Unix-like system (basically everything
 #   except Windows).
+# - is_linux is true for desktop Linux, but not Android (which is
+#   generally too different despite being based on the Linux kernel).
 
 if (current_os == "win" || current_os == "winrt_81" ||
     current_os == "winrt_81_phone" || current_os == "winrt_10") {
+  is_android = false
   is_linux = false
   is_mac = false
   is_posix = false
   is_win = true
   is_freebsd = false
 } else if (current_os == "mac") {
+  is_android = false
   is_linux = false
   is_mac = true
   is_posix = true
   is_win = false
   is_freebsd = false
+} else if (current_os == "android") {
+  is_android = true
+  is_linux = false
+  is_mac = false
+  is_nacl = false
+  is_posix = true
+  is_win = false
+  is_freebsd = false
 } else if (current_os == "linux") {
+  is_android = false
   is_linux = true
   is_mac = false
   is_posix = true
   is_win = false
   is_freebsd = false
 } else if (current_os == "freebsd") {
+  is_android = false
   is_linux = false
   is_mac = false
   is_posix = true
@@ -300,6 +328,11 @@ if (is_win) {
 if (current_os == "winrt_81" || current_os == "winrt_81_phone" ||
     current_os == "winrt_10") {
   default_compiler_configs += [ "//build/config/win:target_winrt" ]
+}
+
+if (is_android) {
+  default_compiler_configs +=
+      [ "//build/config/android:default_cygprofile_instrumentation" ]
 }
 
 # Debug/release-related defines.
