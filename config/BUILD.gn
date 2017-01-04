@@ -5,6 +5,7 @@
 import("//build/config/compiler.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/toolchain.gni")
+import("//build/toolchain/clang.gni")
 
 if (current_cpu == "arm" || current_cpu == "arm64") {
   import("//build/config/arm.gni")
@@ -14,15 +15,11 @@ if (current_cpu == "mipsel" || current_cpu == "mips64el") {
   import("//build/config/mips.gni")
 }
 
-if (is_win) {
-  import("//build/toolchain/win/settings.gni")
-} else if (!is_mac && !is_android) {
-  import("//build/toolchain/posix/settings.gni")
-}
-
 if (is_android) {
   import("//build/toolchain/android/settings.gni")
 }
+
+import("//build/toolchain/compiler_version.gni")
 
 declare_args() {
   # Default to warnings as errors for default workflow, where we catch

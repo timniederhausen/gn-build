@@ -1,4 +1,7 @@
-# TODO(tim): This isn't optimal yet
+if (is_clang) {
+  import("//build/toolchain/clang.gni")
+}
+
 declare_args() {
   # Path of the GCC C compiler executable.
   gcc_cc = "gcc"
@@ -6,19 +9,13 @@ declare_args() {
   # Path of the GCC C++ compiler executable.
   gcc_cxx = "g++"
 
-  # Version of the GCC compiler.
-  # Format: MAJOR * 10000 + MINOR * 100 + PATCHLEVEL
-  gcc_version = 0
-
   # Path of the Clang C compiler executable.
-  clang_cc = "clang"
+  # Defaults to either $clang_base_path/bin/clang or clang.
+  clang_cc = 0
 
   # Path of the Clang C++ compiler executable.
-  clang_cxx = "clang++"
-
-  # Version of the Clang compiler.
-  # Format: MAJOR * 10000 + MINOR * 100 + PATCHLEVEL
-  clang_version = 0
+  # Defaults to either $clang_base_path/bin/clang++ or clang++.
+  clang_cxx = 0
 
   # Path of the 'readelf' utility.
   readelf = "readelf"
@@ -30,24 +27,18 @@ declare_args() {
   nm = "nm"
 }
 
-#
-# If the user didn't specify the compiler version, attempt to autodetect it.
-#
-
-if (gcc_version == 0 && !is_clang) {
-  gcc_version = exec_script("toolchain.py",
-                            [
-                              "get_gcc_version",
-                              gcc_cc,
-                            ],
-                            "trim value")
+if (is_clang && clang_cc == 0) {
+  if (clang_base_path != "") {
+    clang_cc = "$clang_base_path/clang"
+  } else {
+    clang_cc = "clang"
+  }
 }
 
-if (clang_version == 0 && is_clang) {
-  clang_version = exec_script("toolchain.py",
-                              [
-                                "get_clang_version",
-                                clang_cc,
-                              ],
-                              "trim value")
+if (is_clang && clang_cxx == 0) {
+  if (clang_base_path != "") {
+    clang_cxx = "$clang_base_path/clang++"
+  } else {
+    clang_cxx = "clang++"
+  }
 }

@@ -1,0 +1,72 @@
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/toolchain.gni")
+
+# Bring all the windows toolchain definitions in.
+# Officially msc_ver etc. live here, but they're actually defined
+# in win/settings.gni.
+if (is_win) {
+  import("//build/toolchain/win/settings.gni")
+}
+
+# Defines compiler versions for compilers used by multiple toolchains.
+
+# TODO(tim): Disable gcc_version on Windows?
+declare_args() {
+  # Version of the GCC compiler.
+  # Auto-detection is toolchain-specific and happens only if GCC is the active
+  # compiler.
+  # Format: MAJOR * 10000 + MINOR * 100 + PATCHLEVEL
+  gcc_version = 0
+
+  # Version of the Clang compiler.
+  # Auto-detection is toolchain-specific and happens only if Clang is the
+  # active compiler.
+  # Format: MAJOR * 10000 + MINOR * 100 + PATCHLEVEL
+  clang_version = 0
+}
+
+# If the user didn't specify the compiler version, attempt to autodetect it.
+
+if (gcc_version == 0 && !is_clang && !is_win) {
+  if (is_android) {
+    # sync with //build/toolchain/android/BUILD.gn
+    import("//build/toolchain/android/settings.gni")
+    _exe = "${android_tool_prefix}gcc"
+  } else if (is_posix) {
+    import("//build/toolchain/posix/settings.gni")
+    _exe = gcc_cc
+  } else {
+    assert(false, "GCC isn't supported on this platform")
+  }
+  gcc_version = exec_script("posix/toolchain.py",
+                            [
+                              "get_gcc_version",
+                              _exe,
+                            ],
+                            "trim value")
+  print(gcc_version)
+}
+
+if (clang_version == 0 && is_clang && !is_win) {
+  if (is_android) {
+    # sync with //build/toolchain/android/BUILD.gn
+    import("//build/toolchain/clang.gni")
+    _exe = "$clang_base_path/bin/clang"
+  } else if (is_posix) {
+    import("//build/toolchain/posix/settings.gni")
+    _exe = clang_cc
+  } else {
+    assert(false, "GCC isn't supported on this platform")
+  }
+  clang_version = exec_script("posix/toolchain.py",
+                              [
+                                "get_clang_version",
+                                _exe,
+                              ],
+                              "trim value")
+} else if (clang_version == 0 && is_clang) {
+  clang_version = win_clang_version
+}

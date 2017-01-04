@@ -72,10 +72,8 @@ zipalign_path = "$android_sdk_build_tools/zipalign"
 # associated platform.
 # If you raise this, reevaluate the snprintf=snprintf in ./BUILD.gn.
 _android_api_level = 16
-x86_android_sysroot_subdir =
-    "platforms/android-${_android_api_level}/arch-x86"
-arm_android_sysroot_subdir =
-    "platforms/android-${_android_api_level}/arch-arm"
+x86_android_sysroot_subdir = "platforms/android-${_android_api_level}/arch-x86"
+arm_android_sysroot_subdir = "platforms/android-${_android_api_level}/arch-arm"
 mips_android_sysroot_subdir =
     "platforms/android-${_android_api_level}/arch-mips"
 

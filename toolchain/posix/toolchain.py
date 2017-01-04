@@ -1,10 +1,15 @@
 #!/usr/bin/env python
+from __future__ import print_function
+
 import re
 import subprocess
 import sys
+import os
 
 def _get_compiler_version(path, major_define, minor_define, patchlevel_define):
-  defines = subprocess.check_output('echo "" | {} -dM -E -'.format(path), shell=True).split('\n')
+  path = os.path.normpath(path)
+  defines = subprocess.check_output('echo "" | "{}" -dM -E -'.format(path), shell=True,
+                                    universal_newlines=True).split('\n')
   version = 0
   for define in defines:
     define = re.findall(r'#define ([a-zA-Z0-9_]+) (.*)', define)
@@ -17,7 +22,9 @@ def _get_compiler_version(path, major_define, minor_define, patchlevel_define):
     elif name == minor_define:
       version += 100 * int(value)
     elif name == patchlevel_define:
-      version += int(value)
+      value = int(value)
+      if value < 100:
+        version += int(value)
 
   return version
 
@@ -37,7 +44,7 @@ def main():
   }
 
   if len(sys.argv) < 2 or sys.argv[1] not in commands:
-    print >>sys.stderr, 'Expected one of: %s' % ', '.join(commands)
+    print('Expected one of: %s' % ', '.join(commands), file=sys.stderr)
     return 1
 
   return commands[sys.argv[1]](*sys.argv[2:])

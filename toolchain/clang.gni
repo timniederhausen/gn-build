@@ -1,0 +1,26 @@
+# Copyright 2015 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Toolchain-related configuration that may be needed outside the context of the
+# toolchain() rules themselves.
+
+declare_args() {
+  # The path of your Clang installation folder (without /bin).
+  clang_base_path = ""
+
+  # Set to true to use lld, the LLVM linker.
+  use_lld = false
+
+  # Enables the experimental support of ThinLTO that links 3x-10x faster but
+  # (as of now) does not have all the important optimizations such us
+  # devirtualization implemented. See also
+  # http://blog.llvm.org/2016/06/thinlto-scalable-and-incremental-lto.html
+  # TODO(tim): Supported on Windows?
+  use_thin_lto = false
+}
+
+if (is_win && is_clang) {
+  assert(clang_base_path != "",
+         "You must set clang_base_path when using Clang on Windows")
+}
