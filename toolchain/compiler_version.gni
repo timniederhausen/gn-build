@@ -47,7 +47,6 @@ if (gcc_version == 0 && !is_clang && !is_win) {
                               _exe,
                             ],
                             "trim value")
-  print(gcc_version)
 }
 
 if (clang_version == 0 && is_clang && !is_win) {
