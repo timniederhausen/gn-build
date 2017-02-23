@@ -33,10 +33,9 @@ install:
   - gn --version
 
   # Install Ninja
-  - set NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.6.0/ninja-win.zip"
+  - set NINJA_URL="https://github.com/ninja-build/ninja/releases/download/v1.7.2/ninja-win.zip"
   - appveyor DownloadFile %NINJA_URL% -FileName C:\projects\deps\ninja.zip
-  - 7z x C:\projects\deps\ninja.zip -oC:\projects\deps\ninja > nul
-  - set PATH=C:\projects\deps\ninja;%PATH%
+  - 7z x C:\projects\deps\ninja.zip -oC:\projects\deps > nul
   - ninja --version
 
 before_build:
