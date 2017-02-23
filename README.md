@@ -23,7 +23,8 @@ branch contains the test/example project used by the CI tests.
 All variables described here are build args and can be overridden in the user's
 `args.gn` file.
 
-[`//build/config/BUILDCONFIG.gn`](config/BUILDCONFIG.gn)
+#### [`//build/config/BUILDCONFIG.gn`](config/BUILDCONFIG.gn)
+
 (these variables are available everywhere)
 
 * `is_debug` (default: true): Enable/disable debugging options.
@@ -35,7 +36,7 @@ All variables described here are build args and can be overridden in the user's
   By convention, all 3rd-party projects should end up in this directory, so they
   can depend on each other (e.g. $external/mysql_connector -> $external/zlib)
 
-[`//build/toolchain/clang.gni`](toolchain/clang.gni)
+#### [`//build/toolchain/clang.gni`](toolchain/clang.gni)
 
 * `use_lld` (default: false): Use the new LLD linker.
   This requires `is_clang` to be true.
@@ -43,7 +44,7 @@ All variables described here are build args and can be overridden in the user's
   (without /bin). If you use Clang on Windows, you are required to set this,
   as the Clang installation isn't automatically detected.
 
-[`//build/toolchain/compiler_version.gni`](toolchain/compiler_version.gni)
+#### [`//build/toolchain/compiler_version.gni`](toolchain/compiler_version.gni)
 
 * `gcc_version` (default: auto-detected): Version of the GCC compiler.
   **Note:** Auto-detection is toolchain-specific and happens only if GCC is the
@@ -62,7 +63,7 @@ All variables described here are build args and can be overridden in the user's
 
 ### Windows toolchain
 
-[`//build/toolchain/win/settings.gni`](toolchain/win/settings.gni)
+#### [`//build/toolchain/win/settings.gni`](toolchain/win/settings.gni)
 
 * `visual_studio_version` (default: 2013): The MSVC version to use.
 * `visual_studio_path` (default: auto-detected): The path of your MSVC installation.
@@ -75,16 +76,18 @@ All variables described here are build args and can be overridden in the user's
 This is the default toolchain for POSIX operating systems,
 which is used for all POSIX systems that don't have special toolchains.
 
-[`//build/toolchain/posix/settings.gni`](toolchain/posix/settings.gni)
+#### [`//build/toolchain/posix/settings.gni`](toolchain/posix/settings.gni)
 
 * `gcc_cc` (default: gcc): Path of the GCC C compiler executable.
   Does not have to be absolute.
 * `gcc_cxx` (default: g++): Path of the GCC C++ compiler executable.
   Does not have to be absolute.
-* `clang_cc` (default: gcc): Path of the Clang C compiler executable.
-  Does not have to be absolute.
-* `clang_cxx` (default: g++): Path of the Clang C++ compiler executable.
-  Does not have to be absolute.
+* `clang_cc` (default: clang): Path of the Clang C compiler executable.
+  Does not have to be absolute. **Note:** If `clang_base_path` is set,
+  the default will be `clang_base_path/bin/clang`.
+* `clang_cxx` (default: clang++): Path of the Clang C++ compiler executable.
+  Does not have to be absolute. **Note:** If `clang_base_path` is set,
+  the default will be `clang_base_path/bin/clang++`.
 
 ### Mac toolchain
 
@@ -92,7 +95,7 @@ TODO: Mac builds are currently unsupported.
 
 ### Android toolchain
 
-[`//build/toolchain/android/settings.gni`](toolchain/android/settings.gni)
+#### [`//build/toolchain/android/settings.gni`](toolchain/android/settings.gni)
 
 * `android_ndk_root` (default: "$external/android_tools/ndk"):
   Path of the Android NDK.
