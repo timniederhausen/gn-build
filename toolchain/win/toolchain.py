@@ -106,8 +106,11 @@ def _LoadToolchainEnv(vs_path, cpu):
 
   script_path = os.path.join(vs_path, 'VC', 'vcvarsall.bat')
   if not os.path.exists(script_path):
-    raise Exception('%s doesn\'t exist. Does your VS have C++ support?' %
-                    script_path)
+    script_path = os.path.join(vs_path, 'VC', 'Auxiliary',
+                               'Build', 'vcvarsall.bat')
+    if not os.path.exists(script_path):
+      raise Exception('%s doesn\'t exist. Does your VS have C++ support?' %
+                      script_path)
 
   # We only support x64-hosted tools.
   # TODO(tim): change that?
@@ -150,6 +153,7 @@ def _GetClangVersion(clang_base_path, version_as_year):
   year_to_version = {
       '2013': '1800',
       '2015': '1900',
+      # TODO(tim): VS2017 support
   }
   if version_as_year not in year_to_version:
     raise Exception(('Visual Studio version %s (from version_as_year)'
@@ -189,20 +193,34 @@ def DetectVisualStudioPath(version_as_year):
   year_to_version = {
       '2013': '12.0',
       '2015': '14.0',
+      '2017': '15.0',
   }
+
   if version_as_year not in year_to_version:
     raise Exception(('Visual Studio version %s (from version_as_year)'
                      ' not supported. Supported versions are: %s') % (
                        version_as_year, ', '.join(year_to_version.keys())))
-  version = year_to_version[version_as_year]
-  keys = [r'HKLM\Software\Microsoft\VisualStudio\%s' % version,
-          r'HKLM\Software\Wow6432Node\Microsoft\VisualStudio\%s' % version]
-  for key in keys:
-    path = _RegistryGetValue(key, 'InstallDir')
-    if not path:
-      continue
-    path = os.path.normpath(os.path.join(path, '..', '..'))
-    return path
+
+  if version_as_year == '2017':
+    # The VC++ 2017 install location needs to be located using COM instead of
+    # the registry. For details see:
+    # https://blogs.msdn.microsoft.com/heaths/2016/09/15/changes-to-visual-studio-15-setup/
+    # For now we use a hardcoded default with an environment variable override.
+    root_path = r'C:\Program Files (x86)\Microsoft Visual Studio\2017'
+    for edition in ['Professional', 'Community']:
+      path = os.environ.get('vs2017_install', os.path.join(root_path, edition))
+      if os.path.exists(path):
+        return path
+  else:
+    version = year_to_version[version_as_year]
+    keys = [r'HKLM\Software\Microsoft\VisualStudio\%s' % version,
+            r'HKLM\Software\Wow6432Node\Microsoft\VisualStudio\%s' % version]
+    for key in keys:
+      path = _RegistryGetValue(key, 'InstallDir')
+      if not path:
+        continue
+      path = os.path.normpath(os.path.join(path, '..', '..'))
+      return path
 
   raise Exception(('Visual Studio Version %s (from version_as_year)'
                    ' not found.') % (version_as_year))
