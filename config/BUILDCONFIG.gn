@@ -181,9 +181,9 @@ if (host_toolchain == "") {
     # On Windows always use the target CPU for host builds. On the
     # configurations we support this will always work and it saves build steps.
     if (is_clang) {
-      host_toolchain = "//build/toolchain/win:clang_$host_cpu"
+      host_toolchain = "//build/toolchain/win:clang_$target_cpu"
     } else {
-      host_toolchain = "//build/toolchain/win:$host_cpu"
+      host_toolchain = "//build/toolchain/win:$target_cpu"
     }
   } else {
     if (target_os != host_os) {
@@ -208,6 +208,8 @@ if (target_os == "android") {
   } else {
     _default_toolchain = "//build/toolchain/android:android_$target_cpu"
   }
+} else if (target_os == "ios") {
+  _default_toolchain = "//build/toolchain/mac:ios_clang_$target_cpu"
 } else if (target_os == "mac") {
   assert(host_os == "mac", "Mac cross-compiles are unsupported.")
   _default_toolchain = host_toolchain
@@ -245,7 +247,8 @@ if (custom_toolchain != "") {
 # We set these various is_FOO booleans for convenience in writing OS-based
 # conditions.
 #
-# - is_android, is_mac, is_freebsd, and is_win should be obvious.
+# - is_android, is_freebsd, is_ios, and is_win should be obvious.
+# - is_mac is set only for desktop Mac. It is not set on iOS.
 # - is_posix is true for mac and any Unix-like system (basically everything
 #   except Windows).
 # - is_linux is true for desktop Linux, but not Android (which is
@@ -254,6 +257,7 @@ if (custom_toolchain != "") {
 if (current_os == "win" || current_os == "winrt_81" ||
     current_os == "winrt_81_phone" || current_os == "winrt_10") {
   is_android = false
+  is_ios = false
   is_linux = false
   is_mac = false
   is_posix = false
@@ -261,6 +265,7 @@ if (current_os == "win" || current_os == "winrt_81" ||
   is_freebsd = false
 } else if (current_os == "mac") {
   is_android = false
+  is_ios = false
   is_linux = false
   is_mac = true
   is_posix = true
@@ -268,14 +273,24 @@ if (current_os == "win" || current_os == "winrt_81" ||
   is_freebsd = false
 } else if (current_os == "android") {
   is_android = true
+  is_ios = false
   is_linux = false
   is_mac = false
   is_nacl = false
   is_posix = true
   is_win = false
   is_freebsd = false
+} else if (current_os == "ios") {
+  is_android = false
+  is_ios = true
+  is_linux = false
+  is_mac = false
+  is_posix = true
+  is_win = false
+  is_freebsd = false
 } else if (current_os == "linux") {
   is_android = false
+  is_ios = false
   is_linux = true
   is_mac = false
   is_posix = true
@@ -315,7 +330,6 @@ default_compiler_configs = [
   "//build/config:exceptions",
   "//build/config:runtime_library",
   "//build/config:symbol_visibility_hidden",
-  "//build/config/sanitizers:default_sanitizer_flags",
 ]
 if (is_win) {
   default_compiler_configs += [
@@ -366,39 +380,28 @@ if (is_win) {
     # that shouldn't use the windows subsystem.
     "//build/config/win:console",
   ]
-} else if (is_mac) {
+} else if (is_mac || is_ios) {
   _linker_configs = [ "//build/config/mac:strip_all" ]
 } else {
   _linker_configs = []
 }
 
 # Executable defaults.
-default_executable_configs = default_compiler_configs
-default_executable_configs += [ "//build/config:default_libs" ]
-default_executable_configs += _linker_configs
-
-if (is_mac) {
-  default_executable_configs += [
-    "//build/config/mac:mac_dynamic_flags",
-    "//build/config/mac:mac_executable_flags",
-  ]
-} else if (!is_win) {
-  default_executable_configs += [ "//build/config/posix:executable_ldconfig" ]
-}
-
+default_executable_configs = default_compiler_configs + [
+                               "//build/config:default_libs",
+                               "//build/config:executable_config",
+                             ] + _linker_configs
 set_defaults("executable") {
   configs = default_executable_configs
 }
 
 # Shared library and loadable module defaults (also for components in component
 # mode).
-default_shared_library_configs = default_compiler_configs
-default_shared_library_configs += [ "//build/config:default_libs" ]
-default_shared_library_configs += _linker_configs
+default_shared_library_configs = default_compiler_configs + [
+                                   "//build/config:default_libs",
+                                   "//build/config:shared_library_config",
+                                 ] + _linker_configs
 
-if (is_mac) {
-  configs += [ "//build/config/mac:mac_dynamic_flags" ]
-}
 
 set_defaults("shared_library") {
   configs = default_shared_library_configs

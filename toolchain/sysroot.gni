@@ -33,6 +33,12 @@ if (current_os == target_os && current_cpu == target_cpu &&
   } else {
     sysroot = ""
   }
+} else if (is_mac) {
+  import("//build/toolchain/mac/mac_sdk.gni")
+  sysroot = mac_sdk_path
+} else if (is_ios) {
+  import("//build/toolchain/mac/ios_sdk.gni")
+  sysroot = ios_sdk_path
 } else {
   sysroot = ""
 }

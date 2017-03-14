@@ -15,6 +15,10 @@ if (current_cpu == "mipsel" || current_cpu == "mips64el") {
   import("//build/config/mips.gni")
 }
 
+if (is_mac) {
+  import("//build/toolchain/mac/settings.gni")
+}
+
 if (is_android) {
   import("//build/toolchain/android/settings.gni")
 }
@@ -110,7 +114,7 @@ config("compiler") {
     configs += [ "//build/config/win:compiler" ]
   } else if (is_android) {
     configs += [ "//build/config/android:compiler" ]
-  } else if (is_mac) {
+  } else if (is_ios || is_mac) {
     configs += [ "//build/config/mac:compiler" ]
   }
 
@@ -153,7 +157,7 @@ config("compiler") {
     }
 
     # Linker warnings.
-    if (fatal_linker_warnings && !is_mac && !is_freebsd) {
+    if (fatal_linker_warnings && !is_mac && !is_ios && !is_freebsd) {
       ldflags += [ "-Wl,--fatal-warnings" ]
     }
   }
@@ -171,7 +175,7 @@ config("compiler") {
 
   # Non-Mac Posix compiler flags setup.
   # -----------------------------------
-  if (is_posix && !is_mac) {
+  if (is_posix && !(is_mac || is_ios)) {
     if (enable_profiling) {
       if (!is_debug) {
         cflags += [ "-g" ]
@@ -311,6 +315,11 @@ config("compiler") {
     cflags += [ "-fdebug-prefix-map=$absolute_path=." ]
   }
 
+  if (is_mac) {
+    cflags_cc += [ "-stdlib=libc++" ]
+    ldflags += [ "-stdlib=libc++" ]
+  }
+
   # Add flags for link-time optimization. These flags enable
   # optimizations/transformations that require whole-program visibility at link
   # time, so they need to be applied to all translation units, and we may end up
@@ -354,7 +363,7 @@ config("compiler_cpu_abi") {
   cflags = []
   ldflags = []
 
-  if (is_posix && !is_mac) {
+  if (is_posix && !(is_mac || is_ios)) {
     # CPU architecture. We may or may not be doing a cross compile now, so for
     # simplicity we always explicitly set the architecture.
     if (current_cpu == "x64") {
@@ -513,7 +522,7 @@ config("compiler_codegen") {
   configs = []
   cflags = []
 
-  if (is_posix && !is_mac) {
+  if (is_posix && !is_mac && !is_ios) {
     if (current_cpu == "arm") {
       if (is_android && !is_clang) {
         # Clang doesn't support these flags.
@@ -563,14 +572,15 @@ config("stackrealign") {
 }
 
 config("compiler_arm_fpu") {
-  if (current_cpu == "arm") {
+  if (current_cpu == "arm" && !is_ios) {
     cflags = [ "-mfpu=$arm_fpu" ]
     asmflags = cflags
   }
 }
 
 config("compiler_arm_thumb") {
-  if (current_cpu == "arm" && arm_use_thumb && is_posix && !is_mac) {
+  if (current_cpu == "arm" && arm_use_thumb && is_posix &&
+      !(is_mac || is_ios)) {
     cflags = [ "-mthumb" ]
     if (is_android && !is_clang) {
       # Clang doesn't support this option.
@@ -633,6 +643,8 @@ config("runtime_library") {
   # smaller.
   if (is_win) {
     configs += [ "//build/config/win:runtime_library" ]
+  } else if (is_ios) {
+    configs += [ "//build/config/ios:runtime_library" ]
   } else if (is_mac) {
     configs += [ "//build/config/mac:runtime_library" ]
   } else if (is_android) {
@@ -787,7 +799,7 @@ if (is_win) {
     }
   }
 
-  if (is_mac) {
+  if (is_mac || is_ios) {
     if (symbol_level == 2) {
       # Mac dead code stripping requires symbols.
       common_optimize_on_ldflags += [ "-Wl,-dead_strip" ]
@@ -1004,14 +1016,31 @@ config("symbols") {
       ldflags = [ "/DEBUG" ]
     }
   } else {
-    # see: https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html#Debugging-Options
-    # http://clang.llvm.org/docs/UsersManual.html#cmdoption-ggdb
-    cflags = [ "-ggdb3" ]
-    asmflags = cflags
-
+    if (is_mac || is_ios) {
+      cflags = [ "-gdwarf-2" ]
+      if (is_mac && enable_dsyms) {
+        # If generating dSYMs, specify -fno-standalone-debug. This was
+        # originally specified for https://crbug.com/479841 because dsymutil
+        # could not handle a 4GB dSYM file. But dsymutil from Xcodes prior to
+        # version 7 also produces debug data that is incompatible with Breakpad
+        # dump_syms, so this is still required (https://crbug.com/622406).
+        cflags += [ "-fno-standalone-debug" ]
+      }
+    } else if (is_android) {
+      # Breakpad can't handle DWARF 4 symbols properly yet, so use DWARF 3
+      # explicitly on android where we are hitting https://crbug.com/638485.
+      # The arguments MUST be in this order because of a gcc arg parsing bug.
+      cflags = [
+        "-gdwarf-3",
+        "-g2",
+      ]
+    } else {
+      cflags = [ "-g2" ]
+    }
     if (use_debug_fission) {
       cflags += [ "-gsplit-dwarf" ]
     }
+    asmflags = cflags
   }
 }
 
@@ -1029,14 +1058,21 @@ config("minimal_symbols") {
       ldflags = [ "/DEBUG" ]
     }
   } else {
-    # see: https://gcc.gnu.org/onlinedocs/gcc/Debugging-Options.html#Debugging-Options
-    # http://clang.llvm.org/docs/UsersManual.html#cmdoption-ggdb
-    cflags = [ "-ggdb1" ]
-    asmflags = cflags
-
+    if (is_android) {
+      # Breakpad can't handle DWARF 4 symbols properly yet, so use DWARF 3
+      # explicitly on android where we are hitting https://crbug.com/638485.
+      # The arguments MUST be in this order because of a gcc arg parsing bug.
+      cflags = [
+        "-gdwarf-3",
+        "-g1",
+      ]
+    } else {
+      cflags = [ "-g1" ]
+    }
     if (use_debug_fission) {
       cflags += [ "-gsplit-dwarf" ]
     }
+    asmflags = cflags
   }
 }
 
@@ -1061,7 +1097,7 @@ config("default_symbols") {
   }
 }
 
-if (is_mac) {
+if (is_ios || is_mac) {
   # On Mac and iOS, this enables support for ARC (automatic ref-counting).
   # See http://clang.llvm.org/docs/AutomaticReferenceCounting.html.
   config("enable_arc") {
@@ -1119,5 +1155,51 @@ config("default_libs") {
       "dl",
       "rt",
     ]
+  }
+}
+
+# Executable configs -----------------------------------------------------------
+
+# Windows linker setup for EXEs and DLLs.
+if (is_win) {
+  _windows_linker_configs = [
+    "//build/config/win:sdk_link",
+    "//build/config/win:common_linker_setup",
+  ]
+}
+
+# This config defines the configs applied to all executables.
+config("executable_config") {
+  configs = []
+
+  if (is_win) {
+    configs += _windows_linker_configs
+  } else if (is_mac) {
+    configs += [
+      "//build/config/mac:mac_dynamic_flags",
+      "//build/config/mac:mac_executable_flags",
+    ]
+  } else if (is_ios) {
+    configs += [ "//build/config/ios:ios_dynamic_flags" ]
+  } else if (is_posix) {
+    configs += [ "//build/config/posix:executable_ldconfig" ]
+    if (is_android) {
+      configs += [ "//build/config/android:executable_config" ]
+    }
+  }
+}
+
+# Shared library configs -------------------------------------------------------
+
+# This config defines the configs applied to all shared libraries.
+config("shared_library_config") {
+  configs = []
+
+  if (is_win) {
+    configs += _windows_linker_configs
+  } else if (is_mac) {
+    configs += [ "//build/config/mac:mac_dynamic_flags" ]
+  } else if (is_ios) {
+    configs += [ "//build/config/ios:ios_dynamic_flags" ]
   }
 }

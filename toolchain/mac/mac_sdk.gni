@@ -1,0 +1,54 @@
+# Copyright 2014 The Chromium Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/mac/settings.gni")
+
+declare_args() {
+  # Minimum supported version of the Mac SDK.
+  mac_sdk_min = "10.10"
+
+  # Minimum supported version of OSX.
+  mac_deployment_target = "10.9"
+
+  # Path to a specific version of the Mac SDK, not including a slash at the end.
+  # If empty, the path to the lowest version greater than or equal to
+  # mac_sdk_min is used.
+  mac_sdk_path = ""
+
+  # The SDK name as accepted by xcodebuild.
+  mac_sdk_name = "macosx"
+}
+
+find_sdk_args = [ "--print_sdk_path" ]
+if (!use_system_xcode) {
+  find_sdk_args += [
+    "--developer_dir",
+    hermetic_xcode_path,
+  ]
+}
+find_sdk_args += [ mac_sdk_min ]
+
+# The tool will print the SDK path on the first line, and the version on the
+# second line.
+find_sdk_lines =
+    exec_script("//build/toolchain/mac/find_sdk.py", find_sdk_args, "list lines")
+mac_sdk_version = find_sdk_lines[1]
+if (mac_sdk_path == "") {
+  mac_sdk_path = find_sdk_lines[0]
+}
+
+script_name = "//build/toolchain/mac/sdk_info.py"
+sdk_info_args = []
+if (!use_system_xcode) {
+  sdk_info_args += [
+    "--developer_dir",
+    hermetic_xcode_path,
+  ]
+}
+sdk_info_args += [ mac_sdk_name ]
+
+_mac_sdk_result = exec_script(script_name, sdk_info_args, "scope")
+xcode_version = _mac_sdk_result.xcode_version
+xcode_build = _mac_sdk_result.xcode_build
+machine_os_build = _mac_sdk_result.machine_os_build
