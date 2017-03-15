@@ -90,19 +90,18 @@ which is used for all POSIX systems that don't have special toolchains.
   Does not have to be absolute. **Note:** If `clang_base_path` is set,
   the default will be `clang_base_path/bin/clang++`.
 
-### Mac toolchain
+### Mac/iOS toolchain
 
 #### [`//build/toolchain/mac/settings.gni`](toolchain/mac/settings.gni)
 
-* `use_xcode_clang` (default: true): Compile with Xcode version of clang
-  instead of hermetic version shipped with the build. Used on iOS to ship
-  official builds (as they are built with the version of clang shipped with
-  Xcode).
 * `use_system_xcode` (default: true): Use the system install of Xcode for tools
   like ibtool, libtool, etc. This does not affect the compiler. When this
   variable is false, targets will instead use a hermetic install of Xcode.
-* `hermetic_xcode_path` (default: true): The path to the hermetic install of
+* `hermetic_xcode_path` (default: ""): The path to the hermetic install of
   Xcode. Only relevant when use_system_xcode = false.
+* `use_xcode_clang` (default: true): Compile with Xcode version of clang
+  instead of hermetic version shipped with the build. If `true`,
+  `clang_base_path` needs to be set.
 * `enable_dsyms` (default: true): Produce dSYM files for targets that are
   configured to do so. dSYM generation is controlled globally as it is a
   linker output (produced via the `//build/toolchain/mac/linker_driver.py`.
@@ -114,6 +113,33 @@ which is used for all POSIX systems that don't have special toolchains.
   are required, remove that config from a linked target and apply custom
   `-Wcrl,strip` flags. See //build/toolchain/mac/linker_driver.py for more
   information.
+
+#### [`//build/toolchain/mac/mac_sdk.gni`](toolchain/mac/mac_sdk.gni)
+
+* `mac_sdk_min` (default: "10.10"): Minimum supported version of the Mac SDK.
+* `mac_deployment_target` (default: "10.9"): Minimum supported version of OSX.
+* `mac_sdk_path` (default: ""): Path to a specific version of the Mac SDK, not
+  including a slash at the end. If empty, the path to the lowest version
+  greater than or equal to `mac_sdk_min` is used.
+* `mac_sdk_name` (default: "macosx"): The SDK name as accepted by xcodebuild.
+
+#### [`//build/toolchain/mac/ios_sdk.gni`](toolchain/mac/ios_sdk.gni)
+
+* `ios_sdk_path` (default: ""): Path to a specific version of the iOS SDK, not
+  including a slash at the end. When empty this will use the default SDK based
+  on the value of use_ios_simulator.
+
+  SDK properties (required when `ios_sdk_path` is non-empty):
+
+  * `ios_sdk_name`: The SDK name as accepted by xcodebuild.
+  * `ios_sdk_version`
+  * `ios_sdk_platform`
+  * `ios_sdk_platform_path`
+  * `xcode_version`
+  * `xcode_build`
+  * `machine_os_build`
+
+* `ios_deployment_target` (default: "9.0"): Minimum supported version of OSX.
 
 ### Android toolchain
 

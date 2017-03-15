@@ -3,11 +3,6 @@
 # found in the LICENSE file.
 
 declare_args() {
-  # Compile with Xcode version of clang instead of hermetic version shipped
-  # with the build. Used on iOS to ship official builds (as they are built
-  # with the version of clang shipped with Xcode).
-  use_xcode_clang = true
-
   # Use the system install of Xcode for tools like ibtool, libtool, etc.
   # This does not affect the compiler. When this variable is false, targets will
   # instead use a hermetic install of Xcode.
@@ -16,6 +11,11 @@ declare_args() {
   # The path to the hermetic install of Xcode. Only relevant when
   # use_system_xcode = false.
   hermetic_xcode_path = ""
+
+  # Compile with Xcode version of clang instead of hermetic version shipped
+  # with the build. Used on iOS to ship official builds (as they are built
+  # with the version of clang shipped with Xcode).
+  use_xcode_clang = true
 
   # Produce dSYM files for targets that are configured to do so. dSYM
   # generation is controlled globally as it is a linker output (produced via

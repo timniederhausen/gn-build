@@ -8,7 +8,7 @@
 
 import("//build/toolchain/clang.gni")
 if (is_ios) {
-  import("//build/toolchain/ios/ios_sdk.gni")
+  import("//build/toolchain/mac/ios_sdk.gni")
 }
 import("//build/toolchain/mac/mac_sdk.gni")
 

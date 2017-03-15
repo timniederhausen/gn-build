@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/sysroot.gni")
-import("//build/toolchain/ios/ios_sdk.gni")
+import("//build/toolchain/sysroot.gni")
+import("//build/toolchain/mac/ios_sdk.gni")
 
 # This is included by reference in the //build/config/compiler:runtime_library
 # config that is applied to all targets. It is here to separate out the logic
@@ -28,16 +28,16 @@ config("runtime_library") {
 
   # TODO(crbug.com/634373): Remove once Xcode's libc++ has LLVM r256325. Most
   # likely this means one Xcode 8 is released and required.
-  if (use_xcode_clang && get_path_info(ios_sdk_version, "name") != "10") {
-    common_cc_flags = [
-      "-isystem",
-      rebase_path("//third_party/llvm-build/Release+Asserts/include/c++/v1",
-                  root_build_dir),
-    ]
-
-    cflags_cc = common_cc_flags
-    cflags_objcc = common_cc_flags
-  }
+  #if (use_xcode_clang && get_path_info(ios_sdk_version, "name") != "10") {
+  #  common_cc_flags = [
+  #    "-isystem",
+  #    rebase_path("//third_party/llvm-build/Release+Asserts/include/c++/v1",
+  #                root_build_dir),
+  #  ]
+  #
+  #  cflags_cc = common_cc_flags
+  #  cflags_objcc = common_cc_flags
+  #}
 }
 
 config("ios_dynamic_flags") {
