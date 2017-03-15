@@ -316,6 +316,7 @@ if (current_os == "win" || current_os == "winrt_81" ||
 
 # Holds all configs used for running the compiler.
 default_compiler_configs = [
+  "//build/config:extra_flags",
   "//build/config:afdo",
   "//build/config:compiler",
   "//build/config:pthread",
@@ -401,7 +402,6 @@ default_shared_library_configs = default_compiler_configs + [
                                    "//build/config:default_libs",
                                    "//build/config:shared_library_config",
                                  ] + _linker_configs
-
 
 set_defaults("shared_library") {
   configs = default_shared_library_configs
