@@ -31,8 +31,9 @@ find_sdk_args += [ mac_sdk_min ]
 
 # The tool will print the SDK path on the first line, and the version on the
 # second line.
-find_sdk_lines =
-    exec_script("//build/toolchain/mac/find_sdk.py", find_sdk_args, "list lines")
+find_sdk_lines = exec_script("//build/toolchain/mac/find_sdk.py",
+                             find_sdk_args,
+                             "list lines")
 mac_sdk_version = find_sdk_lines[1]
 if (mac_sdk_path == "") {
   mac_sdk_path = find_sdk_lines[0]
