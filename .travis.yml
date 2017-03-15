@@ -79,4 +79,4 @@ script:
   - ./gn gen out --args="$GN_ARGS" --root=testsrc
   - cat out/args.gn
   - ninja -C out
-  - out/hello
+  - cd out &&  ./hello
