@@ -48,6 +48,7 @@ def main(arch, source, output, rc_name, *args):
                       # doesn't get written to the root build directory.
                       cwd=output_dir)
   if retcode:
+    print(out)
     return retcode
 
   # Now we need to fix the relative paths of our included files
