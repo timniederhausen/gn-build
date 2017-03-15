@@ -19,6 +19,7 @@ environment:
     - GN_ARGS: "visual_studio_version=\\\"2015\\\" clang_base_path=\\\"C:\\Program Files\\LLVM\\\" is_clang=true is_debug=false"
     - GN_ARGS: "visual_studio_version=\\\"2015\\\" clang_base_path=\\\"C:\\Program Files\\LLVM\\\" is_clang=true is_official_build=true"
     - GN_ARGS: "visual_studio_version=\\\"2017\\\""
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
 
 matrix:
   fast_finish: true
