@@ -2,7 +2,9 @@ language: cpp
 
 env:
   global:
-    - GN_LNX64_SHA1: 3841819dc328973fb34ea2dd3bbbc0b63361b1f9
+    # https://chromium.googlesource.com/chromium/buildtools/+/e6b510a9daf822bbe9f922c200c58150803d2fd8
+    - GN_LNX64_SHA1: a452edf26a551fef8a884496d143b7e56cbe2ad9
+    - GN_MAC_SHA1: 8185d63f0055bb02d46d22a450131b74b22e13ba
 
 addons:
   apt:
@@ -57,15 +59,24 @@ matrix:
       env: GN_ARGS='clang_cc="clang-3.8" clang_cxx="clang++-3.8" is_clang=true is_official_build=true'
       addons: *clang_addons
 
+    - compiler: clang
+      os: osx
+      env: GN_ARGS='is_clang=true is_official_build=true'
+
+install:
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export GN_SHA1="$GN_LNX64_SHA1"; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export GN_SHA1="$GN_MAC_SHA1"; brew install ninja; fi
+  - echo $GN_SHA1
+
 script:
   - python gn_helpers_unittest.py
-  - travis_retry wget --no-check-certificate --quiet -O gn https://storage.googleapis.com/chromium-gn/$GN_LNX64_SHA1
+  - travis_retry wget --no-check-certificate --quiet -O gn https://storage.googleapis.com/chromium-gn/$GN_SHA1
   - chmod +x gn
   - git clone --branch=testsrc https://github.com/timniederhausen/gn-build.git testsrc
   - mkdir testsrc/build
   - mv config testsrc/build/
   - mv toolchain testsrc/build/
-  - chmod +x gn && ./gn gen out --args="$GN_ARGS" --root=testsrc
+  - ./gn gen out --args="$GN_ARGS" --root=testsrc
   - cat out/args.gn
   - ninja -C out
   - out/hello
