@@ -86,8 +86,10 @@ template("msvc_toolchain") {
 
       # lld-link includes a replacement for lib.exe that can produce thin
       # archives and understands bitcode (for lto builds).
-      lib = "$clang_base_path/bin/$lld_link /lib /llvmlibthin"
-      link = "$clang_base_path/bin/$lld_link"
+      # NOTE: We need to escape the executable path, since $clang_base_path
+      # can contain spaces (e.g. C:\Program Files\LLVM)
+      lib = "\"$clang_base_path/bin/$lld_link\" /lib /llvmlibthin"
+      link = "\"$clang_base_path/bin/$lld_link\""
     } else {
       lib = "lib.exe"
       link = "link.exe"
