@@ -955,7 +955,11 @@ config("optimize_fuzzing") {
 # either "optimize" or "optimize_debug", depending on the build flags.
 config("default_optimization") {
   if (is_debug) {
-    configs = [ ":optimize_debug" ]
+    if (optimize_debug) {
+      configs = [ ":optimize_debug" ]
+    } else {
+      configs = [ ":no_optimize" ]
+    }
   } else if (optimize_for_fuzzing) {
     assert(!is_win, "Fuzzing optimize level not supported on Windows")
     configs = [ ":optimize_fuzzing" ]

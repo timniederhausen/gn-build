@@ -42,6 +42,7 @@ config("compiler") {
   ]
 
   if (current_cpu == "x86") {
+    # TODO: Move this somewhere else (compiler_codegen?)
     # Preserve previous /arch behaviour (since 12.0 it defaults to /arch:SSE2)
     cflags += [ "/arch:IA32" ]
   }
@@ -81,6 +82,7 @@ config("compiler") {
     }
   }
 
+  # TODO: Make this optional
   # /PROFILE ensures that the PDB file contains FIXUP information (growing the
   # PDB file by about 5%) but does not otherwise alter the output binary. This
   # information is used by the Syzygy optimization tool when decomposing the
@@ -289,7 +291,7 @@ config("no_incremental_linking") {
 
 # Applies incremental linking or not depending on the current configuration.
 config("default_incremental_linking") {
-  if (is_debug && !is_syzyasan) {
+  if (is_debug && !is_syzyasan && !optimize_debug) {
     configs = [ ":incremental_linking" ]
   } else {
     configs = [ ":no_incremental_linking" ]

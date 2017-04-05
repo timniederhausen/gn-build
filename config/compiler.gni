@@ -30,4 +30,7 @@ declare_args() {
   # Enable Link Time Optimization in optimized builds (output programs run
   # faster, but linking is up to 5-20x slower).
   enable_lto = is_official_build && is_win && !is_clang
+
+  # Enable some optimizations that don't interfere with debugging.
+  optimize_debug = false
 }
