@@ -398,7 +398,7 @@ config("extra_flags") {
 # so that some targets can remove it from the list with:
 #   configs -= [ "//build/config:pthread" ]
 config("pthread") {
-  if (is_linux) {
+  if (is_linux || is_freebsd) {
     cflags = [ "-pthread" ]
     ldflags = [ "-pthread" ]
   }
