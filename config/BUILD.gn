@@ -1005,8 +1005,8 @@ config("lto") {
     }
   } else if (!is_win) {
     if (use_thin_lto) {
-      cflags += [ "-flto=thin" ]
-      ldflags += [ "-flto=thin" ]
+      cflags = [ "-flto=thin" ]
+      ldflags = [ "-flto=thin" ]
 
       # Limit the parallelism to avoid too agressive competition between
       # linker jobs. This is still suboptimal to a potential dynamic
@@ -1038,6 +1038,10 @@ config("lto") {
       cflags += [ "-fwhole-program-vtables" ]
       ldflags += [ "-fwhole-program-vtables" ]
     }
+  }
+
+  if (is_posix) {
+    asmflags = cflags
   }
 }
 
