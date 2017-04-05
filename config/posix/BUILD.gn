@@ -6,6 +6,8 @@ assert(is_posix)
 # is applied to all targets. It is here to separate out the logic that is
 # Posix-only.
 config("compiler") {
+  cflags = []
+  ldflags = []
   if (is_freebsd && is_clang) {
     # GCC seems to include /usr/local/include in its default include dirs.
     cflags += [ "-isystem/usr/local/include" ]
