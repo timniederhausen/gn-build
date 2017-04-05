@@ -1068,7 +1068,7 @@ config("symbols") {
       ldflags = [ "/DEBUG" ]
     }
 
-    if (is_clang) {
+    if (is_clang && clang_version >= 40000) {
       # /DEBUG:FASTLINK requires every object file to have standalone debug
       # information.
       if (is_win_fastlink) {
