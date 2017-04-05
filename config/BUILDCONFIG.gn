@@ -298,6 +298,7 @@ if (current_os == "win" || current_os == "winrt_81" ||
   is_freebsd = false
 } else if (current_os == "freebsd") {
   is_android = false
+  is_ios = false
   is_linux = false
   is_mac = false
   is_posix = true
