@@ -145,6 +145,7 @@ def CaptureCommandStderr(command, env=None):
     command: A list containing the command and arguments.
     env: Environment variables for the new process.
   """
-  child = subprocess.Popen(command, stderr=subprocess.PIPE, env=env)
+  child = subprocess.Popen(command, stderr=subprocess.PIPE, env=env,
+                           universal_newlines=True)
   _, stderr = child.communicate()
   return child.returncode, stderr

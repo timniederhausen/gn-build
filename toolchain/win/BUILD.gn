@@ -4,6 +4,7 @@
 
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/win/settings.gni")
+import("//build/toolchain/clang_static_analyzer.gni")
 import("//build/toolchain/toolchain.gni")
 import("//build/toolchain/clang.gni")
 
@@ -75,6 +76,14 @@ template("msvc_toolchain") {
       cl = "${invoker.cl} --rsp-quoting=posix"
     } else {
       cl = invoker.cl
+    }
+
+    if (toolchain_uses_clang && use_clang_static_analyzer) {
+      analyzer_prefix =
+          "$python_path " +
+          rebase_path("//build/toolchain/clang_static_analyzer_wrapper.py",
+                      root_build_dir) + " --mode=cl"
+      cl = "${analyzer_prefix} ${cl}"
     }
 
     if (use_lld) {
