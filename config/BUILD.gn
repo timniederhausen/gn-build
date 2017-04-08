@@ -72,6 +72,10 @@ declare_args() {
   # branches)
   optimize_for_fuzzing = false
 
+  # Control stack protection guards. There should be no need to disable this.
+  # Note: Only honored on POSIX systems.
+  enable_stack_protection = true
+
   # Optional string containing extra assembler arguments.
   # Like 'asmflags' this value is passed to all tools that take
   # an .asm or .S input.
@@ -160,20 +164,8 @@ config("compiler") {
       "-fvisibility-inlines-hidden",
     ]
 
-    # Stack protection.
-    if (is_mac) {
-      # The strong variant of the stack protector significantly increases
-      # binary size, so only enable it in debug mode.
-      if (is_debug) {
-        cflags += [ "-fstack-protector-strong" ]
-      } else {
-        cflags += [ "-fstack-protector" ]
-      }
-    } else if (is_posix && !is_android &&
-               ((is_clang && clang_version >= 30500) ||
-                (!is_clang && gcc_version >= 40900))) {
-      # https://outflux.net/blog/archives/2014/01/27/fstack-protector-strong/
-      cflags += [ "-fstack-protector-strong" ]
+    if (enable_stack_protection) {
+      configs += [ ":stack_protection" ]
     }
 
     # Linker warnings.
@@ -595,6 +587,24 @@ config("compiler_codegen") {
   }
 
   asmflags = cflags
+}
+
+# Stack protection flags.
+config("stack_protection") {
+  if (is_mac) {
+    # The strong variant of the stack protector significantly increases
+    # binary size, so only enable it in debug mode.
+    if (is_debug) {
+      cflags = [ "-fstack-protector-strong" ]
+    } else {
+      cflags = [ "-fstack-protector" ]
+    }
+  } else if (is_posix && !is_android &&
+             ((is_clang && clang_version >= 30500) ||
+              (!is_clang && gcc_version >= 40900))) {
+    # https://outflux.net/blog/archives/2014/01/27/fstack-protector-strong/
+    cflags = [ "-fstack-protector-strong" ]
+  }
 }
 
 # This is separate from :compiler_codegen (and not even a sub-config there)
