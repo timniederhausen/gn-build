@@ -2,10 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/config/sanitizers/sanitizers.gni")
+import("//build/config/arm.gni")
+
 declare_args() {
   # Compile in such a way as to enable profiling of the generated code. For
   # example, don't omit the frame pointer and leave in symbols.
   enable_profiling = false
+
+  # Enable Link Time Optimization in optimized builds (output programs run
+  # faster, but linking is up to 5-20x slower).
+  enable_lto = is_official_build && is_win && !is_clang
+
+  # Enable some optimizations that don't interfere with debugging.
+  optimize_debug = false
 
   # use_debug_fission: whether to use split DWARF debug info
   # files. This can reduce link time significantly, but is incompatible
@@ -19,18 +29,39 @@ declare_args() {
   # been set, e.g. by a toolchain_args() block.
   use_debug_fission = false
 
+  # Whether to use the gold linker from binutils instead of lld or bfd.
+  use_gold = false
+
   # Tell VS to create a PDB that references information in .obj files rather
   # than copying it all. This should improve linker performance. mspdbcmf.exe
   # can be used to convert a fastlink pdb to a normal one.
   is_win_fastlink = false
+}
 
-  # Whether to use the gold linker from binutils instead of lld or bfd.
-  use_gold = false
+# Whether to emit frame pointers by default.
+if (is_mac || is_ios) {
+  enable_frame_pointers = true
+} else if (is_win) {
+  # 64-bit Windows ABI doesn't support frame pointers.
+  if (target_cpu == "x64") {
+    enable_frame_pointers = false
+  } else {
+    enable_frame_pointers = true
+  }
+} else {
+  # Explicitly ask for frame pointers, otherwise:
+  # * Stacks may be missing for sanitizer and profiling builds.
+  # * Debug tcmalloc can crash (crbug.com/636489).
+  # * Stacks may be missing for arm64 crash dumps (crbug.com/391706).
+  enable_frame_pointers =
+      using_sanitizer || enable_profiling || is_debug || current_cpu == "arm64"
+}
 
-  # Enable Link Time Optimization in optimized builds (output programs run
-  # faster, but linking is up to 5-20x slower).
-  enable_lto = is_official_build && is_win && !is_clang
-
-  # Enable some optimizations that don't interfere with debugging.
-  optimize_debug = false
+# Unwinding with frame pointers requires that frame pointers are enabled by
+# default for most translation units, and that the architecture isn't thumb, as
+# frame pointers are not correctly emitted for thumb.
+if (enable_frame_pointers && !(current_cpu == "arm" && arm_use_thumb)) {
+  can_unwind_with_frame_pointers = true
+} else {
+  can_unwind_with_frame_pointers = false
 }
