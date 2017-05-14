@@ -153,7 +153,7 @@ def _GetClangVersion(clang_base_path, version_as_year):
   year_to_version = {
       '2013': '1800',
       '2015': '1900',
-      # TODO(tim): VS2017 support
+      '2017': '1910',
   }
   if version_as_year not in year_to_version:
     raise Exception(('Visual Studio version %s (from version_as_year)'
