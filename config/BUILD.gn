@@ -929,7 +929,7 @@ config("optimize_debug") {
     # misleading symbols in stack traces. It is also incompatible with
     # incremental linking, which we enable for both Debug and component builds.
     ldflags = [
-      #"/OPT:ICF",  # Redundant COMDAT folding.
+      "/OPT:NOICF",  # Redundant COMDAT folding.
       "/OPT:REF",  # Remove unreferenced data.
     ]
   } else {
