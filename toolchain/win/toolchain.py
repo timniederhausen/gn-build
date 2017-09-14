@@ -96,7 +96,7 @@ def _LoadEnvFromBat(args):
   return _Call(args)
 
 
-def _LoadToolchainEnv(vs_path, cpu):
+def _LoadToolchainEnv(vs_path, cpu, sdk_version):
   """Returns a dictionary with environment variables that must be set while
   running binaries from the toolchain (e.g. INCLUDE and PATH for cl.exe)."""
   # Check if we are running in the SDK command line environment and use
@@ -116,7 +116,10 @@ def _LoadToolchainEnv(vs_path, cpu):
   # TODO(tim): change that?
   arch_name = 'amd64_x86' if cpu == 'x86' else 'amd64'
 
-  variables = _LoadEnvFromBat([script_path, arch_name])
+  args = [script_path, arch_name]
+  if sdk_version and sdk_version != 'default':
+    args.append(sdk_version)
+  variables = _LoadEnvFromBat(args)
   return _ExtractImportantEnvironment(variables)
 
 
@@ -231,7 +234,7 @@ def GetVsPath(version_as_year):
   print(DetectVisualStudioPath(version_as_year))
 
 
-def SetupToolchain(version_as_year, vs_path, include_prefix, clang_base_path=None):
+def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None, clang_base_path=None):
   cpus = ('x86', 'x64')
 
   bin_dirs = {}
@@ -241,7 +244,7 @@ def SetupToolchain(version_as_year, vs_path, include_prefix, clang_base_path=Non
 
   for cpu in cpus:
     # Extract environment variables for subprocesses.
-    env = _LoadToolchainEnv(vs_path, cpu)
+    env = _LoadToolchainEnv(vs_path, cpu, sdk_version)
     envs[cpu] = env
 
     windows_sdk_paths[cpu] = os.path.realpath(env['WINDOWSSDKDIR'])

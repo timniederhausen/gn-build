@@ -10,6 +10,11 @@ declare_args() {
   # Path to Visual Studio.
   visual_studio_path = ""
 
+  # Windows SDK version to use.
+  # Can either be a full Windows 10 SDK number (e.g. 10.0.10240.0),
+  # "8.1" for the Windows 8.1 SDK or "default" to use the VS default version.
+  windows_sdk_version = "default"
+
   # Full path to the Windows SDK, not including a backslash at the end.
   # This value is the default location, override if you have a different
   # installation location.
@@ -57,7 +62,7 @@ toolchain_data = exec_script("toolchain.py",
                                visual_studio_version,
                                visual_studio_path,
                                sys_include_prefix,
-
+                               windows_sdk_version,
                                # Don't use clang_base_path directly, so we can
                                # skip clang detection if not needed
                                # (i.e. !is_clang).
