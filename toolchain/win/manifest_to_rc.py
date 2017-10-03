@@ -7,9 +7,10 @@ def main(manifest_path, resource_path, resource_name):
   |args| is tuple containing path to resource file, path to manifest file
   and resource name which can be "1" (for executables) or "2" (for DLLs)."""
   with open(resource_path, 'wb') as output:
-    output.write('#include <windows.h>\n%s RT_MANIFEST "%s"' % (
+    line = '#include <windows.h>\n%s RT_MANIFEST "%s"' % (
       resource_name,
-      os.path.abspath(manifest_path).replace('\\', '/')))
+      os.path.abspath(manifest_path).replace('\\', '/'))
+    output.write(line.encode('utf-8'))
 
   return 0
 
