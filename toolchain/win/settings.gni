@@ -19,14 +19,6 @@ declare_args() {
   # This value is the default location, override if you have a different
   # installation location.
   windows_sdk_path = ""
-
-  # Value of the _MSC_VER variable.
-  # see: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
-  msc_ver = 0
-
-  # Value of the _MSC_FULL_VER variable.
-  # see: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
-  msc_full_ver = 0
 }
 
 assert(visual_studio_version != "",
@@ -74,13 +66,13 @@ if (windows_sdk_path == "") {
   windows_sdk_path = toolchain_data.windows_sdk_path
 }
 
-if (msc_ver == 0) {
-  msc_ver = toolchain_data.msc_ver
-}
+# Value of the _MSC_VER variable.
+# see: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
+msc_ver = toolchain_data.msc_ver
 
-if (msc_full_ver == 0) {
-  msc_full_ver = toolchain_data.msc_full_ver
-}
+# Value of the _MSC_FULL_VER variable.
+# see: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
+msc_full_ver = toolchain_data.msc_full_ver
 
 if (is_clang) {
   win_clang_version = toolchain_data.clang_version
