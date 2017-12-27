@@ -743,6 +743,21 @@ config("c++14") {
   }
 }
 
+config("c++17") {
+  if (!is_win) {
+    if (is_clang && clang_version >= 50000) {
+      cflags_cc = [ "-std=c++17" ]
+    } else {
+      cflags_cc = [ "-std=c++1z" ]
+    }
+  } else if (is_clang || msc_full_ver >= 191125506) {
+    cflags_cc = [ "/std:c++17" ]
+  } else if (is_clang || msc_full_ver >= 190024210) {
+    # Fall back to c++latest if c++17 isn't available
+    cflags_cc = [ "/std:c++latest" ]
+  }
+}
+
 config("c++latest") {
   if (!is_win) {
     cflags_cc = [ "-std=c++1z" ]
