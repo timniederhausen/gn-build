@@ -1,0 +1,4 @@
+# Python artifacts (bytecode, PyCharm projects, ...)
+/.idea
+/__pycache__
+*.pyc
