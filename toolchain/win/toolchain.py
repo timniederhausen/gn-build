@@ -152,7 +152,7 @@ def _ParseClVersion(out):
   raise Exception("Failed to find MSVC version string in: " + out)
 
 
-def _GetClangVersion(clang_base_path, version_as_year):
+def _GetClangMscVersionFromYear(version_as_year):
   year_to_version = {
       '2013': '1800',
       '2015': '1900',
@@ -162,8 +162,10 @@ def _GetClangVersion(clang_base_path, version_as_year):
     raise Exception(('Visual Studio version %s (from version_as_year)'
                      ' not supported. Supported versions are: %s') % (
                        version_as_year, ', '.join(year_to_version.keys())))
+  return year_to_version[version_as_year]
 
-  msc_ver = year_to_version[version_as_year]
+
+def _GetClangVersion(clang_base_path, msc_ver):
   clang_version = 0
   msc_full_ver = 0
 
@@ -234,7 +236,7 @@ def GetVsPath(version_as_year):
   print(DetectVisualStudioPath(version_as_year))
 
 
-def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None, clang_base_path=None):
+def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None, clang_base_path=None, clang_msc_ver=None):
   cpus = ('x86', 'x64')
 
   bin_dirs = {}
@@ -288,7 +290,8 @@ def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None, c
 
   # TODO(tim): Check for mismatches between x86 and x64?
   if clang_base_path:
-    clang_version, msc_full_ver = _GetClangVersion(clang_base_path, version_as_year)
+    msc_ver = clang_msc_ver or _GetClangMscVersionFromYear(version_as_year)
+    clang_version, msc_full_ver = _GetClangVersion(clang_base_path, msc_ver)
     print('clang_version = ' + gn_helpers.ToGNString(clang_version))
     print('msc_ver = ' + gn_helpers.ToGNString(msc_full_ver // 100000))
     print('msc_full_ver = ' + gn_helpers.ToGNString(msc_full_ver))
