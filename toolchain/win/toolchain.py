@@ -212,7 +212,7 @@ def DetectVisualStudioPath(version_as_year):
     # https://blogs.msdn.microsoft.com/heaths/2016/09/15/changes-to-visual-studio-15-setup/
     # For now we use a hardcoded default with an environment variable override.
     root_path = r'C:\Program Files (x86)\Microsoft Visual Studio\2017'
-    for edition in ['Professional', 'Community']:
+    for edition in ['Professional', 'Community', 'Enterprise', 'BuildTools']:
       path = os.environ.get('vs2017_install', os.path.join(root_path, edition))
       if os.path.exists(path):
         return path
