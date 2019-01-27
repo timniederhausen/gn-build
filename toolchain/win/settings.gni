@@ -15,11 +15,6 @@ declare_args() {
   # "8.1" for the Windows 8.1 SDK or "default" to use the VS default version.
   windows_sdk_version = "default"
 
-  # Full path to the Windows SDK, not including a backslash at the end.
-  # This value is the default location, override if you have a different
-  # installation location.
-  windows_sdk_path = ""
-
   # Microsoft compiler version number clang-cl will report in _MSC_VER
   # (Defaults to the default version associated with the chosen VS version.)
   clang_msc_ver = 0
@@ -69,9 +64,8 @@ toolchain_data = exec_script("toolchain.py",
                              ],
                              "scope")
 
-if (windows_sdk_path == "") {
-  windows_sdk_path = toolchain_data.windows_sdk_path
-}
+# Full path to the Windows SDK, not including a backslash at the end.
+windows_sdk_path = toolchain_data.windows_sdk_path
 
 # Value of the _MSC_VER variable.
 # see: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
