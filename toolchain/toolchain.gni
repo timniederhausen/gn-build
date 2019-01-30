@@ -48,7 +48,7 @@ if (host_os == "win") {
   copy_path =
       rebase_path("//build/toolchain/win/recursive_mirror.py", root_build_dir)
 
-  stamp_command = "$python_path $stamp_path {{output}}"
+  stamp_command = "cmd /c type nul > \"{{output}}\""
   copy_command = "$python_path $copy_path {{source}} {{output}}"
 } else {
   stamp_command = "touch {{output}}"
