@@ -6,10 +6,12 @@
 import re
 import os
 import subprocess
+import itertools
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), os.pardir, os.pardir))
 import gn_helpers
+
 
 def _RegistryGetValueUsingWinReg(key, value):
   """Use the _winreg module to obtain the value of a registry key.
@@ -45,16 +47,16 @@ def _ExtractImportantEnvironment(output_of_set):
   """Extracts environment variables required for the toolchain to run from
   a textual dump output by the cmd.exe 'set' command."""
   envvars_to_save = (
-      'include',
-      'lib',
-      'libpath',
-      'path',
-      'pathext',
-      'systemroot',
-      'temp',
-      'tmp',
-      'windowssdkdir',
-      )
+    'include',
+    'lib',
+    'libpath',
+    'path',
+    'pathext',
+    'systemroot',
+    'temp',
+    'tmp',
+    'windowssdkdir',
+  )
   env = {}
   # This occasionally happens and leads to misleading SYSTEMROOT error messages
   # if not caught here.
@@ -79,30 +81,28 @@ def _ExtractImportantEnvironment(output_of_set):
   return env
 
 
-def _Call(args, **kwargs):
-  popen = subprocess.Popen(args, shell=True, universal_newlines=True,
-                           stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                           **kwargs)
-  out, _ = popen.communicate()
-  if popen.returncode != 0:
-    raise Exception('"%s" failed with error %d' % (args, popen.returncode))
+def _Spawn(args, **kwargs):
+  proc = subprocess.Popen(args, shell=True, universal_newlines=True,
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                          **kwargs)
+  proc.args = args
+  return proc
+
+
+def _ProcessSpawnResult(proc):
+  out, _ = proc.communicate()
+  if proc.returncode != 0:
+    raise Exception('"%s" failed with error %d' % (proc.args, popen.returncode))
   return out
 
 
-def _LoadEnvFromBat(args):
-  """Given a bat command, runs it and returns env vars set by it."""
-  args = args[:]
-  args.extend(('&&', 'set'))
-  return _Call(args)
-
-
-def _LoadToolchainEnv(vs_path, cpu, sdk_version):
+def _BuildToolchainSetupCommand(vs_path, cpu, sdk_version, is_uwp=False):
   """Returns a dictionary with environment variables that must be set while
   running binaries from the toolchain (e.g. INCLUDE and PATH for cl.exe)."""
   # Check if we are running in the SDK command line environment and use
   # the setup script from the SDK if so. |cpu| should be either
-  # 'x86' or 'x64'.
-  assert cpu in ('x86', 'x64')
+  # 'x86' or 'x64' or 'arm' or 'arm64'.
+  assert cpu in ('x86', 'x64', 'arm', 'arm64')
 
   script_path = os.path.join(vs_path, 'VC', 'vcvarsall.bat')
   if not os.path.exists(script_path):
@@ -114,13 +114,18 @@ def _LoadToolchainEnv(vs_path, cpu, sdk_version):
 
   # We only support x64-hosted tools.
   # TODO(tim): change that?
-  arch_name = 'amd64_x86' if cpu == 'x86' else 'amd64'
+  arch_name = "amd64"
+  if (cpu != 'x64'):
+    # x64 is default target CPU thus any other CPU requires a target set
+    arch_name += '_' + cpu
 
   args = [script_path, arch_name]
   if sdk_version and sdk_version != 'default':
     args.append(sdk_version)
-  variables = _LoadEnvFromBat(args)
-  return _ExtractImportantEnvironment(variables)
+  if is_uwp:
+    args.append('store')
+  args.extend(('&&', 'set'))
+  return args
 
 
 def _FormatAsEnvironmentBlock(envvar_dict):
@@ -144,7 +149,7 @@ def _ParseClVersion(out):
 
     version = m.group(1).split('.')
     if len(version) < 3 or len(version[0]) != 2 or len(version[1]) != 2 or \
-       len(version[2]) != 5:
+            len(version[2]) != 5:
       raise Exception("Invalid MSVC version: " + str(version))
 
     return int(''.join(version[:3]))
@@ -154,14 +159,14 @@ def _ParseClVersion(out):
 
 def _GetClangMscVersionFromYear(version_as_year):
   year_to_version = {
-      '2013': '1800',
-      '2015': '1900',
-      '2017': '1910',
+    '2013': '1800',
+    '2015': '1900',
+    '2017': '1910',
   }
   if version_as_year not in year_to_version:
     raise Exception(('Visual Studio version %s (from version_as_year)'
                      ' not supported. Supported versions are: %s') % (
-                       version_as_year, ', '.join(year_to_version.keys())))
+                      version_as_year, ', '.join(year_to_version.keys())))
   return year_to_version[version_as_year]
 
 
@@ -196,15 +201,15 @@ def DetectVisualStudioPath(version_as_year):
   """
 
   year_to_version = {
-      '2013': '12.0',
-      '2015': '14.0',
-      '2017': '15.0',
+    '2013': '12.0',
+    '2015': '14.0',
+    '2017': '15.0',
   }
 
   if version_as_year not in year_to_version:
     raise Exception(('Visual Studio version %s (from version_as_year)'
                      ' not supported. Supported versions are: %s') % (
-                       version_as_year, ', '.join(year_to_version.keys())))
+                      version_as_year, ', '.join(year_to_version.keys())))
 
   if version_as_year == '2017':
     # The VC++ 2017 install location needs to be located using COM instead of
@@ -236,54 +241,73 @@ def GetVsPath(version_as_year):
   print(DetectVisualStudioPath(version_as_year))
 
 
-def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None, clang_base_path=None, clang_msc_ver=None):
-  cpus = ('x86', 'x64')
+def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None,
+                   clang_base_path=None, clang_msc_ver=None):
+  cpus = ('x86', 'x64', 'arm', 'arm64')
 
-  bin_dirs = {}
+  # TODO(tim): We now launch all processes at once, but this still takes too long
+  processes = {}
+  for (cpu, is_uwp) in itertools.product(cpus, (False, True)):
+    suffix = '_uwp' if is_uwp else ''
+    processes[cpu + suffix] = _Spawn(_BuildToolchainSetupCommand(vs_path, cpu, sdk_version, is_uwp))
+
   windows_sdk_paths = {}
-  include_flags = {}
   envs = {}
-
-  for cpu in cpus:
+  for (cpu, is_uwp) in itertools.product(cpus, (False, True)):
+    suffix = '_uwp' if is_uwp else ''
     # Extract environment variables for subprocesses.
-    env = _LoadToolchainEnv(vs_path, cpu, sdk_version)
-    envs[cpu] = env
+    env = _ExtractImportantEnvironment(_ProcessSpawnResult(processes[cpu + suffix]))
+    envs[cpu + suffix] = env
 
-    windows_sdk_paths[cpu] = os.path.realpath(env['WINDOWSSDKDIR'])
-
+    vc_bin_dir = ''
+    vc_lib_path = ''
+    vc_lib_atlmfc_path = ''
+    vc_lib_um_path = ''
     for path in env['PATH'].split(os.pathsep):
       if os.path.exists(os.path.join(path, 'cl.exe')):
-        bin_dirs[cpu] = os.path.realpath(path)
+        vc_bin_dir = os.path.realpath(path)
         break
+
+    if not vc_bin_dir:
+      continue
+
+    for path in env['LIB'].split(os.pathsep):
+      if os.path.exists(os.path.join(path, 'msvcrt.lib')):
+        vc_lib_path = os.path.realpath(path)
+        break
+
+    for path in env['LIB'].split(os.pathsep):
+      if os.path.exists(os.path.join(path, 'atls.lib')):
+        vc_lib_atlmfc_path = os.path.realpath(path)
+        break
+
+    for path in env['LIB'].split(os.pathsep):
+      if os.path.exists(os.path.join(path, 'User32.Lib')):
+        vc_lib_um_path = os.path.realpath(path)
+        break
+
+    windows_sdk_paths[cpu + suffix] = os.path.realpath(env['WINDOWSSDKDIR'])
 
     # The separator for INCLUDE here must match the one used in
     # _LoadToolchainEnv() above.
     include = [include_prefix + p for p in env['INCLUDE'].split(';') if p]
     include = ' '.join(['"' + i.replace('"', r'\"') + '"' for i in include])
-    include_flags[cpu] = include
+    include_flags = include
 
     env_block = _FormatAsEnvironmentBlock(env)
-    with open('environment.' + cpu, 'wb') as f:
+    env_filename = 'environment_{}{}'.format(cpu, suffix)
+    with open(env_filename, 'wb') as f:
       f.write(env_block)
-
-    # Create a store app version of the environment.
-    if 'LIB' in env:
-      env['LIB']     = env['LIB']    .replace(r'\VC\LIB', r'\VC\LIB\STORE')
-    if 'LIBPATH' in env:
-      env['LIBPATH'] = env['LIBPATH'].replace(r'\VC\LIB', r'\VC\LIB\STORE')
-
-    env_block = _FormatAsEnvironmentBlock(env)
-    with open('environment.winrt_' + cpu, 'wb') as f:
-        f.write(env_block)
+    print(cpu + suffix + ' = {')
+    print(gn_helpers.ToGNString(dict(
+      vc_bin_dir=vc_bin_dir, vc_lib_path=vc_lib_path,
+      vc_lib_atlmfc_path=vc_lib_atlmfc_path,
+      vc_lib_um_path=vc_lib_um_path,
+      include_flags=include_flags, env_filename=env_filename)))
+    print('}')
 
   if len(set(windows_sdk_paths.values())) != 1:
     raise Exception("WINDOWSSDKDIR is different for x86/x64")
-
-  print('x86_bin_dir = ' + gn_helpers.ToGNString(bin_dirs['x86']))
-  print('x64_bin_dir = ' + gn_helpers.ToGNString(bin_dirs['x64']))
-
-  print('x86_include_flags = ' + gn_helpers.ToGNString(include_flags['x86']))
-  print('x64_include_flags = ' + gn_helpers.ToGNString(include_flags['x64']))
 
   # SDK is always the same
   print('windows_sdk_path = ' + gn_helpers.ToGNString(windows_sdk_paths['x86']))
@@ -296,15 +320,17 @@ def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None, c
     print('msc_ver = ' + gn_helpers.ToGNString(msc_full_ver // 100000))
     print('msc_full_ver = ' + gn_helpers.ToGNString(msc_full_ver))
   else:
-    msc_full_ver = _ParseClVersion(_Call(['cl'], env=envs['x86']))
+    # TODO(tim): Do we want to support different toolchain versions for
+    # different architectures?
+    msc_full_ver = _ParseClVersion(_ProcessSpawnResult(_Spawn(['cl'], env=envs['x86'])))
     print('msc_ver = ' + gn_helpers.ToGNString(msc_full_ver // 100000))
     print('msc_full_ver = ' + gn_helpers.ToGNString(msc_full_ver))
 
 
 def main():
   commands = {
-      'get_vs_dir': GetVsPath,
-      'setup_toolchain': SetupToolchain,
+    'get_vs_dir': GetVsPath,
+    'setup_toolchain': SetupToolchain,
   }
   if len(sys.argv) < 2 or sys.argv[1] not in commands:
     sys.stderr.write('Expected one of: %s\n' % ', '.join(commands))

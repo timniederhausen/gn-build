@@ -221,9 +221,12 @@ if (target_os == "android") {
   } else {
     _default_toolchain = "//build/toolchain/win:$target_cpu"
   }
-} else if (target_os == "winrt_81" || target_os == "winrt_81_phone" ||
-           target_os == "winrt_10") {
-  _default_toolchain = "//build/toolchain/win:winrt_$target_cpu"
+} else if (target_os == "winuwp") {
+  # Only target WinUWP on for a Windows store application and only
+  # x86, x64 and arm are supported target CPUs.
+  assert(target_cpu == "x86" || target_cpu == "x64" || target_cpu == "arm" ||
+         target_cpu == "arm64")
+  _default_toolchain = "//build/toolchain/win:uwp_$target_cpu"
 } else {
   if (is_clang) {
     _default_toolchain = "//build/toolchain/posix:clang_$target_cpu"
@@ -254,8 +257,7 @@ if (custom_toolchain != "") {
 # - is_linux is true for desktop Linux, but not Android (which is
 #   generally too different despite being based on the Linux kernel).
 
-if (current_os == "win" || current_os == "winrt_81" ||
-    current_os == "winrt_81_phone" || current_os == "winrt_10") {
+if (current_os == "win" || current_os == "winuwp") {
   is_android = false
   is_ios = false
   is_linux = false
@@ -341,10 +343,6 @@ if (is_win) {
     "//build/config/win:winver",
     "//build/config/win:vs_code_analysis",
   ]
-}
-if (current_os == "winrt_81" || current_os == "winrt_81_phone" ||
-    current_os == "winrt_10") {
-  default_compiler_configs += [ "//build/config/win:target_winrt" ]
 }
 
 if (is_android) {

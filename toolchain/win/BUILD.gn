@@ -45,8 +45,6 @@ template("msvc_toolchain") {
 
       # This value needs to be passed through unchanged.
       host_toolchain = host_toolchain
-
-      current_os = "win"
     }
 
     # Make these apply to all tools below.
@@ -310,80 +308,101 @@ template("msvc_toolchain") {
   }
 }
 
-if (target_cpu == "x86") {
-  msvc_toolchain("x86") {
-    environment = x86_environment_path
-    cl = "\"${toolchain_data.x86_bin_dir}/cl.exe\""
-
-    toolchain_args = {
-      current_cpu = "x86"
-      is_clang = false
-    }
-  }
-
-  msvc_toolchain("clang_x86") {
-    environment = x86_environment_path
-    cl = "$clang_base_path/bin/${clang_cl}"
-    sys_include_flags = "${toolchain_data.x86_include_flags}"
-
-    toolchain_args = {
-      current_cpu = "x86"
-      is_clang = true
-    }
-  }
-}
-
-if (target_cpu == "x64") {
-  msvc_toolchain("x64") {
-    environment = x64_environment_path
-    cl = "\"${toolchain_data.x64_bin_dir}/cl.exe\""
-
-    toolchain_args = {
-      current_cpu = "x64"
-      is_clang = false
-    }
-  }
-
-  msvc_toolchain("clang_x64") {
-    environment = x64_environment_path
-    cl = "$clang_base_path/bin/${clang_cl}"
-    sys_include_flags = "${toolchain_data.x64_include_flags}"
-
-    toolchain_args = {
-      current_cpu = "x64"
-      is_clang = true
-    }
-  }
-}
-
-# WinRT toolchains. Only define these when targeting them.
+# Parameters:
+#   target_toolchain_data: Toolchain configuration for the desired OS/CPU combo.
 #
-# NOTE: This is currently broken because it references vc_bin_dir. brettw@
-# changed this around a bit, and I don't know what this should be set to
-# in terms of what setup_toolchain returns for a certain CPU architecture.
-if (target_os == "winrt_81" || target_os == "winrt_81_phone" ||
-    target_os == "winrt_10") {
-  if (target_cpu == "x86") {
-    msvc_toolchain("winrt_x86") {
-      environment = "environment.winrt_x86"
-      cl = "\"${vc_bin_dir}/cl.exe\""
+template("target_combo_toolchains") {
+  tgt_toolchain_data = invoker.target_toolchain_data
+  cpu = target_name
+  msvc_toolchain(cpu) {
+    environment = tgt_toolchain_data.env_filename
+    cl = "\"${tgt_toolchain_data.vc_bin_dir}/cl.exe\""
+
+    toolchain_args = {
+      current_os = "win"
+      current_cpu = cpu
+      is_clang = false
+    }
+  }
+
+  msvc_toolchain("clang_" + cpu) {
+    environment = tgt_toolchain_data.env_filename
+    cl = "$clang_base_path/bin/${clang_cl}"
+    sys_include_flags = "${tgt_toolchain_data.include_flags}"
+
+    toolchain_args = {
+      current_os = "win"
+      current_cpu = cpu
+      is_clang = true
+    }
+  }
+}
+
+if (defined(toolchain_data.x86)) {
+  target_combo_toolchains("x86") {
+    target_toolchain_data = toolchain_data.x86
+  }
+}
+
+if (defined(toolchain_data.x64)) {
+  target_combo_toolchains("x64") {
+    target_toolchain_data = toolchain_data.x64
+  }
+}
+
+if (defined(toolchain_data.arm)) {
+  target_combo_toolchains("arm") {
+    target_toolchain_data = toolchain_data.arm
+  }
+}
+
+if (defined(toolchain_data.arm64)) {
+  target_combo_toolchains("arm64") {
+    target_toolchain_data = toolchain_data.arm64
+  }
+}
+
+# WinUWP toolchains. Only define these when targeting them.
+if (target_os == "winuwp") {
+  assert(target_cpu == "x64" || target_cpu == "x86" || target_cpu == "arm" ||
+         target_cpu == "arm64")
+
+  template("uwp_target_combo_toolchains") {
+    cpu = target_name
+    msvc_toolchain("uwp_" + cpu) {
+      tgt_toolchain_data = invoker.target_toolchain_data
+      environment = tgt_toolchain_data.env_filename
+      cl = "\"${tgt_toolchain_data.vc_bin_dir}/cl.exe\""
 
       toolchain_args = {
-        current_cpu = "x86"
+        current_os = "winuwp"
+        current_cpu = cpu
         is_clang = false
       }
     }
   }
 
-  if (target_cpu == "x64") {
-    msvc_toolchain("winrt_x64") {
-      environment = "environment.winrt_x64"
-      cl = "\"${vc_bin_dir}/cl.exe\""
+  if (defined(toolchain_data.x86_uwp)) {
+    uwp_target_combo_toolchains("x86") {
+      target_toolchain_data = toolchain_data.x86_uwp
+    }
+  }
 
-      toolchain_args = {
-        current_cpu = "x64"
-        is_clang = false
-      }
+  if (defined(toolchain_data.x64_uwp)) {
+    uwp_target_combo_toolchains("x64") {
+      target_toolchain_data = toolchain_data.x64_uwp
+    }
+  }
+
+  if (defined(toolchain_data.arm_uwp)) {
+    uwp_target_combo_toolchains("arm") {
+      target_toolchain_data = toolchain_data.arm_uwp
+    }
+  }
+
+  if (defined(toolchain_data.arm64_uwp)) {
+    uwp_target_combo_toolchains("arm64") {
+      target_toolchain_data = toolchain_data.arm64_uwp
     }
   }
 }

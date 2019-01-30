@@ -56,11 +56,12 @@ toolchain_data = exec_script("toolchain.py",
                                visual_studio_path,
                                sys_include_prefix,
                                windows_sdk_version,
+
                                # Don't use clang_base_path directly, so we can
                                # skip clang detection if not needed
                                # (i.e. !is_clang).
                                _clang_base_path_arg,
-                               _clang_msc_ver
+                               _clang_msc_ver,
                              ],
                              "scope")
 
@@ -79,7 +80,33 @@ if (is_clang) {
   win_clang_version = toolchain_data.clang_version
 }
 
-# These are hardcoded in toolchain.py
-x86_environment_path = "environment.x86"
-x64_environment_path = "environment.x64"
-# TODO(tim): WinRT
+# current_toolchain_data: Settings specific to current_os/current_cpu
+if (current_os == "win") {
+  if (current_cpu == "x86") {
+    assert(defined(toolchain_data.x86))
+    current_toolchain_data = toolchain_data.x86
+  } else if (current_cpu == "x64") {
+    assert(defined(toolchain_data.x64))
+    current_toolchain_data = toolchain_data.x64
+  } else if (current_cpu == "arm") {
+    assert(defined(toolchain_data.arm))
+    current_toolchain_data = toolchain_data.arm
+  } else if (current_cpu == "arm64") {
+    assert(defined(toolchain_data.arm64))
+    current_toolchain_data = toolchain_data.arm64
+  }
+} else if (current_os == "winuwp") {
+  if (current_cpu == "x86") {
+    assert(defined(toolchain_data.x86_uwp))
+    current_toolchain_data = toolchain_data.x86_uwp
+  } else if (current_cpu == "x64") {
+    assert(defined(toolchain_data.x64_uwp))
+    current_toolchain_data = toolchain_data.x64_uwp
+  } else if (current_cpu == "arm") {
+    assert(defined(toolchain_data.arm_uwp))
+    current_toolchain_data = toolchain_data.arm_uwp
+  } else if (current_cpu == "arm64") {
+    assert(defined(toolchain_data.arm64_uwp))
+    current_toolchain_data = toolchain_data.arm64_uwp
+  }
+}

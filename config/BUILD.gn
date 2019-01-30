@@ -599,9 +599,8 @@ config("stack_protection") {
     } else {
       cflags = [ "-fstack-protector" ]
     }
-  } else if (is_posix && !is_android &&
-             ((is_clang && clang_version >= 30500) ||
-              (!is_clang && gcc_version >= 40900))) {
+  } else if (is_posix && !is_android && ((is_clang && clang_version >= 30500) ||
+                                         (!is_clang && gcc_version >= 40900))) {
     # https://outflux.net/blog/archives/2014/01/27/fstack-protector-strong/
     cflags = [ "-fstack-protector-strong" ]
   }
