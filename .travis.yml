@@ -2,9 +2,9 @@ language: cpp
 
 env:
   global:
-    # https://chromium.googlesource.com/chromium/buildtools/+/e6b510a9daf822bbe9f922c200c58150803d2fd8
-    - GN_LNX64_SHA1: a452edf26a551fef8a884496d143b7e56cbe2ad9
-    - GN_MAC_SHA1: 8185d63f0055bb02d46d22a450131b74b22e13ba
+    # https://chromium.googlesource.com/chromium/buildtools/+/04161ec8d7c781e4498c699254c69ba0dd959fde
+    - GN_LNX64_SHA1: 3523d50538357829725d4ed74b777a572ce0ac74
+    - GN_MAC_SHA1: d43122f6140d0711518aa909980cb009c4fbce3d
 
 addons:
   apt:

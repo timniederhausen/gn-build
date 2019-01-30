@@ -3,7 +3,7 @@ clone_folder: c:\projects\gn-build\build
 shallow_clone: true
 
 environment:
-  GN_WIN_SHA1: 217e559aac0d20119f1667a880cebd02824ec685
+  GN_WIN_SHA1: e20768d93a6b4400de0d03bb8ceb46facdbe3883
 
   matrix:
     - GN_ARGS: "visual_studio_version=\\\"2013\\\""
