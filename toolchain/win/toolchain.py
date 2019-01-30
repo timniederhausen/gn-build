@@ -245,6 +245,12 @@ def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None,
                    clang_base_path=None, clang_msc_ver=None):
   cpus = ('x86', 'x64', 'arm', 'arm64')
 
+  # vcvarsall.bat for VS 2017 fails if run after running vcvarsall.bat from
+  # VS 2013 or VS 2015. Fix this by clearing the vsinstalldir environment
+  # variable.
+  if 'VSINSTALLDIR' in os.environ:
+    del os.environ['VSINSTALLDIR']
+
   # TODO(tim): We now launch all processes at once, but this still takes too long
   processes = {}
   for (cpu, is_uwp) in itertools.product(cpus, (False, True)):
