@@ -15,6 +15,7 @@ import argparse
 import os
 import subprocess
 import sys
+import errno
 
 import wrapper_utils
 
@@ -55,7 +56,7 @@ def main():
   try:
     os.remove(args.output)
   except OSError as e:
-    if e.errno != os.errno.ENOENT:
+    if e.errno != errno.ENOENT:
       raise
 
   # Now just run the ar command.
