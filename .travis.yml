@@ -6,13 +6,14 @@ env:
     - GN_LNX64_SHA1: 3523d50538357829725d4ed74b777a572ce0ac74
     - GN_MAC_SHA1: d43122f6140d0711518aa909980cb009c4fbce3d
 
+    - NINJA_LNX_ZIP: https://github.com/ninja-build/ninja/releases/download/v1.7.2/ninja-linux.zip
+    - NINJA_MAC_ZIP: https://github.com/ninja-build/ninja/releases/download/v1.7.2/ninja-mac.zip
+
 addons:
   apt:
     sources: &sources
       # this is needed for gcc and clang
       - ubuntu-toolchain-r-test
-    packages: &packages
-      - ninja-build
 
 matrix:
   include:
@@ -25,7 +26,6 @@ matrix:
             - *sources
           packages:
             - g++-4.9
-            - *packages
 
     - compiler: gcc
       os: linux
@@ -47,7 +47,6 @@ matrix:
             - *sources
           packages:
             - clang-3.8
-            - *packages
 
     - compiler: clang
       os: linux
@@ -64,19 +63,31 @@ matrix:
       env: GN_ARGS='is_clang=true is_official_build=true'
 
 install:
-  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export GN_SHA1="$GN_LNX64_SHA1"; fi
-  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export GN_SHA1="$GN_MAC_SHA1"; brew install ninja; fi
+  - if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then export GN_SHA1="$GN_LNX64_SHA1"; export NINJA_ZIP="$NINJA_LNX_ZIP"; fi
+  - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then export GN_SHA1="$GN_MAC_SHA1"; export NINJA_ZIP="$NINJA_MAC_ZIP"; fi
   - echo $GN_SHA1
 
 script:
+  # Run gn_helpers unittests first - this should fail if we have an unsupported Python version
   - python gn_helpers_unittest.py
+
+  # Install recent Ninja
+  - travis_retry wget --no-check-certificate --quiet -O ninja.zip $NINJA_ZIP
+  - python -c 'import sys,zipfile;zipfile.ZipFile(sys.argv[1]).extractall()' ninja.zip
+  - chmod +x ninja
+
+  # Install recent GN binary (from Chromium)
   - travis_retry wget --no-check-certificate --quiet -O gn https://storage.googleapis.com/chromium-gn/$GN_SHA1
   - chmod +x gn
+
+  # Setup test project for our //build
   - git clone --branch=testsrc https://github.com/timniederhausen/gn-build.git testsrc
   - mkdir testsrc/build
   - mv config testsrc/build/
   - mv toolchain testsrc/build/
+
+  # Try to build the test project
   - ./gn gen out --args="$GN_ARGS" --root=testsrc
   - cat out/args.gn
-  - ninja -C out
+  - ./ninja -C out
   - cd out &&  ./hello
