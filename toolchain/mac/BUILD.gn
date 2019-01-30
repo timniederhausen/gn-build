@@ -377,6 +377,7 @@ template("mac_toolchain") {
       description = "COPY_BUNDLE_DATA {{source}} {{output}}"
       pool = ":bundle_pool($default_toolchain)"
     }
+
     tool("compile_xcassets") {
       _tool = rebase_path("//build/toolchain/mac/compile_xcassets.py",
                           root_build_dir)
@@ -394,6 +395,10 @@ template("mac_toolchain") {
 
       description = "COMPILE_XCASSETS {{output}}"
       pool = ":bundle_pool($default_toolchain)"
+    }
+
+    tool("action") {
+      pool = "//build/toolchain:action_pool($default_toolchain)"
     }
   }
 }
