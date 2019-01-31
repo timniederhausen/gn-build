@@ -236,6 +236,15 @@ def DetectVisualStudioPath(version_as_year):
                    ' not found.') % (version_as_year))
 
 
+def FindLatestVisualStudio():
+  for version_as_year in ['2013', '2015', '2017']:
+    try:
+      return version_as_year, DetectVisualStudioPath(version_as_year)
+    except Exception:
+      pass
+  raise Exception('No suitable Visual Studio version installed')
+
+
 def GetVsPath(version_as_year):
   """Gets location information about the current toolchain. This is used for the GN build."""
   print(DetectVisualStudioPath(version_as_year))
@@ -250,6 +259,11 @@ def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None,
   # variable.
   if 'VSINSTALLDIR' in os.environ:
     del os.environ['VSINSTALLDIR']
+
+  if version_as_year == 'latest':
+    version_as_year, vs_path = FindLatestVisualStudio()
+  elif not vs_path or vs_path == 'default':
+    vs_path = DetectVisualStudioPath(version_as_year)
 
   # TODO(tim): We now launch all processes at once, but this still takes too long
   processes = {}
@@ -314,6 +328,9 @@ def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None,
 
   if len(set(windows_sdk_paths.values())) != 1:
     raise Exception("WINDOWSSDKDIR is different for x86/x64")
+
+  print('visual_studio_version = ' + gn_helpers.ToGNString(version_as_year))
+  print('visual_studio_path = ' + gn_helpers.ToGNString(vs_path))
 
   # SDK is always the same
   print('windows_sdk_path = ' + gn_helpers.ToGNString(windows_sdk_paths['x86']))

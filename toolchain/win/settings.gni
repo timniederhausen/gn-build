@@ -3,11 +3,19 @@ if (is_clang) {
 }
 
 declare_args() {
-  # Version of Visual Studio pointed to by the visual_studio_path.
-  # Use "2013" for Visual Studio 2013.
-  visual_studio_version = "2013"
+  # Desired version of Visual Studio.
+  # If visual_studio_path is set, this must be
+  # the version of the VS installation at the visual_studio_path.
+  #
+  # Use "2013" for Visual Studio 2013 or "latest" for automatically
+  # choosing the highest version (visual_studio_path must be unset in
+  # this case).
+  visual_studio_version = "latest"
 
-  # Path to Visual Studio.
+  # The path of your MSVC installation.
+  #
+  # If this is set you must set visual_studio_version as well.
+  # Autodetected based on visual_studio_version.
   visual_studio_path = ""
 
   # Windows SDK version to use.
@@ -20,17 +28,9 @@ declare_args() {
   clang_msc_ver = 0
 }
 
-assert(visual_studio_version != "",
-       "You must set visual_studio_version on Windows")
-
-if (visual_studio_path == "") {
-  visual_studio_path = exec_script("toolchain.py",
-                                   [
-                                     "get_vs_dir",
-                                     visual_studio_version,
-                                   ],
-                                   "trim string")
-}
+assert(visual_studio_version != "", "visual_studio_version must be non-empty")
+assert(visual_studio_path == "" || visual_studio_version != "latest",
+       "You must set visual_studio_version if you set visual_studio_path")
 
 if (is_clang) {
   sys_include_prefix = "-imsvc"
@@ -49,6 +49,11 @@ if (host_os == "win") {
   clang_cl = "clang-cl"
 }
 
+if (visual_studio_path == "") {
+  # can't pass empty args
+  visual_studio_path = "default"
+}
+
 toolchain_data = exec_script("toolchain.py",
                              [
                                "setup_toolchain",
@@ -64,6 +69,9 @@ toolchain_data = exec_script("toolchain.py",
                                _clang_msc_ver,
                              ],
                              "scope")
+
+visual_studio_version = toolchain_data.visual_studio_version
+visual_studio_path = toolchain_data.visual_studio_path
 
 # Full path to the Windows SDK, not including a backslash at the end.
 windows_sdk_path = toolchain_data.windows_sdk_path
