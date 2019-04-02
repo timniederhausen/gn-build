@@ -237,7 +237,7 @@ def DetectVisualStudioPath(version_as_year):
 
 
 def FindLatestVisualStudio():
-  for version_as_year in ['2013', '2015', '2017']:
+  for version_as_year in ['2017', '2015', '2013']:
     try:
       return version_as_year, DetectVisualStudioPath(version_as_year)
     except Exception:
