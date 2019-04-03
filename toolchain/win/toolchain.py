@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import json
 import re
 import os
 import subprocess
@@ -196,6 +197,10 @@ def _GetClangVersion(clang_base_path, msc_ver):
   return clang_version, msc_full_ver
 
 
+# https://github.com/Microsoft/vswhere/blob/4b16c6302889506e2d49ff24cfa39234753412b2/README.md
+_VSWHERE_PATH = r'%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe'
+
+
 def DetectVisualStudioPath(version_as_year):
   """Return path to the version_as_year of Visual Studio.
   """
@@ -215,7 +220,20 @@ def DetectVisualStudioPath(version_as_year):
     # The VC++ 2017 install location needs to be located using COM instead of
     # the registry. For details see:
     # https://blogs.msdn.microsoft.com/heaths/2016/09/15/changes-to-visual-studio-15-setup/
-    # For now we use a hardcoded default with an environment variable override.
+    vswhere_path = os.path.expandvars(_VSWHERE_PATH)
+    if os.path.exists(vswhere_path):
+        version = year_to_version[version_as_year]
+        try:
+          out = json.loads(subprocess.check_output([
+              vswhere_path, '-version',
+              '[{},{})'.format(float(version), float(version) + 1),
+              '-legacy', '-format', 'json', '-utf8',
+          ]))
+          if out:
+              return out[0]['installationPath']
+        except subprocess.CalledProcessError:
+          pass
+
     root_path = r'C:\Program Files (x86)\Microsoft Visual Studio\2017'
     for edition in ['Professional', 'Community', 'Enterprise', 'BuildTools']:
       path = os.environ.get('vs2017_install', os.path.join(root_path, edition))
