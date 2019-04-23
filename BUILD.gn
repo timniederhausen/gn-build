@@ -37,3 +37,31 @@ static_library("hello_static") {
     "hello_static.h",
   ]
 }
+
+group("hello_all") {
+  if (is_win) {
+    if (is_clang) {
+      deps = [
+        ":hello(//build/toolchain/win:clang_x64)",
+        ":hello(//build/toolchain/win:clang_x86)",
+      ]
+    } else {
+      deps = [
+        ":hello(//build/toolchain/win:x64)",
+        ":hello(//build/toolchain/win:x86)",
+      ]
+    }
+  } else if (is_posix && !is_android) {
+    if (is_clang) {
+      deps = [
+        ":hello(//build/toolchain/posix:clang_x64)",
+        ":hello(//build/toolchain/posix:clang_x86)",
+      ]
+    } else {
+      deps = [
+        ":hello(//build/toolchain/posix:x64)",
+        ":hello(//build/toolchain/posix:x86)",
+      ]
+    }
+  }
+}
