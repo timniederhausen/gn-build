@@ -128,7 +128,7 @@ template("mac_toolchain") {
     # Object files go in this directory. Use label_name instead of
     # target_output_name since labels will generally have no spaces and will be
     # unique in the directory.
-    object_subdir = "{{target_out_dir}}/{{label_name}}"
+    object_subdir = "{{target_out_dir}}/{{label_name}}/{{source_root_relative_dir}}"
 
     # If dSYMs are enabled, this flag will be added to the link tools.
     if (_enable_dsyms) {

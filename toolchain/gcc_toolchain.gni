@@ -203,7 +203,7 @@ template("gcc_toolchain") {
     lib_dir_switch = "-L"
 
     # Object files go in this directory.
-    object_subdir = "{{target_out_dir}}/{{label_name}}"
+    object_subdir = "{{target_out_dir}}/{{label_name}}/{{source_root_relative_dir}}"
 
     tool("cc") {
       depfile = "{{output}}.d"
