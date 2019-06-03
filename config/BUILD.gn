@@ -328,13 +328,6 @@ config("compiler") {
     cflags += [ "-fdiagnostics-absolute-paths" ]
   }
 
-  # Makes builds independent of absolute file path.
-  # clang-cl (used if is_win) doesn't expose this flag.
-  if (is_clang && !is_win && clang_version >= 30800) {
-    absolute_path = rebase_path("//.")
-    cflags += [ "-fdebug-prefix-map=$absolute_path=." ]
-  }
-
   if (is_mac) {
     cflags_cc += [ "-stdlib=libc++" ]
     ldflags += [ "-stdlib=libc++" ]
@@ -691,6 +684,58 @@ config("symbol_visibility_hidden") {
     # Note that -fvisibility-inlines-hidden is set globally in the compiler
     # config since that can almost always be applied.
     cflags = [ "-fvisibility=hidden" ]
+  }
+}
+
+config("deterministic") {
+  cflags = []
+  ldflags = []
+
+  if (is_clang && clang_version >= 70000) {
+    cflags += [ "-no-canonical-prefixes" ]
+
+    # If debug option is given, clang includes $cwd in debug info by default.
+    # For such build, this flag generates reproducible obj files even we use
+    # different build directory like "out/feature_a" and "out/feature_b" if
+    # we build same files with same compile flag.
+    # Other paths are already given in relative, no need to normalize them.
+    cflags += [
+      "-Xclang",
+      "-fdebug-compilation-dir",
+      "-Xclang",
+      ".",
+    ]
+  }
+
+  if (is_win && is_clang && clang_version >= 70000) {
+    # Absolutize source file path for PDB.
+    ldflags += [ "/PDBSourcePath:" + rebase_path(root_build_dir) ]
+  }
+
+  if (is_win) {
+    # /DEBUG causes the linker to generate a pdb file, and to write the absolute
+    # path to it in the executable file it generates.  This flag turns that
+    # absolute path into just the basename of the pdb file, which helps with
+    # build reproducibility. Debuggers look for pdb files next to executables,
+    # so there's no downside to always using this.
+    ldflags += [ "/pdbaltpath:%_PDB%" ]
+  }
+
+  # Eliminate build metadata (__DATE__, __TIME__ and __TIMESTAMP__)
+  if (is_win && !is_clang) {
+    cflags += [
+      "/wd4117",  # Trying to define or undefine a predefined macro.
+      "/D__DATE__=",
+      "/D__TIME__=",
+      "/D__TIMESTAMP__=",
+    ]
+  } else {
+    cflags += [
+      "-Wno-builtin-macro-redefined",
+      "-D__DATE__=",
+      "-D__TIME__=",
+      "-D__TIMESTAMP__=",
+    ]
   }
 }
 
