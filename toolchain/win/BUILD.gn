@@ -43,6 +43,8 @@ template("msvc_toolchain") {
         forward_variables_from(invoker.toolchain_args, "*")
       }
 
+      cached_toolchain_data = toolchain_data
+
       # This value needs to be passed through unchanged.
       host_toolchain = host_toolchain
     }
