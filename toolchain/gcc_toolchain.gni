@@ -205,7 +205,7 @@ template("gcc_toolchain") {
     # Generic compiler output path (they all produce object files)
     # Use label_name instead of target_output_name since labels will generally
     # have no spaces and will be unique in the directory.
-    object_path = "{{target_out_dir}}/{{label_name}}/{{source_root_relative_dir}}/{{source_name_part}}.o"
+    object_path = "{{target_out_dir}}/{{label_name}}/{{source_name_part}}.o"
 
     tool("cc") {
       depfile = "{{output}}.d"
