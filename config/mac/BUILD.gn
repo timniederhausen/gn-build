@@ -2,16 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/sysroot.gni")
-import("//build/toolchain/mac/mac_sdk.gni")
+import("$gn_build_dir/toolchain/sysroot.gni")
+import("$gn_build_dir/toolchain/mac/mac_sdk.gni")
 
 if (is_ios) {
   # This needs to be imported after mac_sdk.gni as it overrides some of the
   # variables defined by it.
-  import("//build/toolchain/mac/ios_sdk.gni")
+  import("$gn_build_dir/toolchain/mac/ios_sdk.gni")
 }
 
-# This is included by reference in the //build/config/compiler config that
+# This is included by reference in the $gn_build_dir/config/compiler config that
 # is applied to all targets. It is here to separate out the logic.
 #
 # This is applied to BOTH desktop Mac and iOS targets.
@@ -73,7 +73,7 @@ config("compiler") {
   }
 }
 
-# This is included by reference in the //build/config/compiler:runtime_library
+# This is included by reference in the $gn_build_dir/config/compiler:runtime_library
 # config that is applied to all targets. It is here to separate out the logic
 # that is Mac-only. Please see that target for advice on what should go in
 # :runtime_library vs. :compiler.
@@ -109,7 +109,7 @@ config("mac_executable_flags") {
 }
 
 # The ldflags referenced below are handled by
-# //build/toolchain/mac/linker_driver.py.
+# $gn_build_dir/toolchain/mac/linker_driver.py.
 # Remove this config if a target wishes to change the arguments passed to the
 # strip command during linking. This config by default strips all symbols
 # from a binary, but some targets may wish to specify a saves file to preserve

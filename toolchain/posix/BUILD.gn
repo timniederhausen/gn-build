@@ -1,5 +1,5 @@
-import("//build/toolchain/gcc_toolchain.gni")
-import("//build/toolchain/posix/settings.gni")
+import("$gn_build_dir/toolchain/gcc_toolchain.gni")
+import("$gn_build_dir/toolchain/posix/settings.gni")
 
 gcc_toolchain("clang_x86") {
   cc = clang_cc

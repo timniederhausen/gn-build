@@ -2,13 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/toolchain.gni")
+import("$gn_build_dir/toolchain/toolchain.gni")
 
 # Bring all the windows toolchain definitions in.
 # Officially msc_ver etc. live here, but they're actually defined
 # in win/settings.gni.
 if (is_win) {
-  import("//build/toolchain/win/settings.gni")
+  import("$gn_build_dir/toolchain/win/settings.gni")
 }
 
 # Defines compiler versions for compilers used by multiple toolchains.
@@ -32,11 +32,11 @@ declare_args() {
 
 if (gcc_version == 0 && !is_clang && !is_win) {
   if (is_android) {
-    # sync with //build/toolchain/android/BUILD.gn
-    import("//build/toolchain/android/settings.gni")
+    # sync with $gn_build_dir/toolchain/android/BUILD.gn
+    import("$gn_build_dir/toolchain/android/settings.gni")
     _exe = "${android_tool_prefix}gcc"
   } else if (is_posix) {
-    import("//build/toolchain/posix/settings.gni")
+    import("$gn_build_dir/toolchain/posix/settings.gni")
     _exe = gcc_cc
   } else {
     assert(false, "GCC isn't supported on this platform")
@@ -51,11 +51,11 @@ if (gcc_version == 0 && !is_clang && !is_win) {
 
 if (clang_version == 0 && is_clang && !is_win) {
   if (is_android) {
-    # sync with //build/toolchain/android/BUILD.gn
-    import("//build/toolchain/clang.gni")
+    # sync with $gn_build_dir/toolchain/android/BUILD.gn
+    import("$gn_build_dir/toolchain/clang.gni")
     _exe = "$clang_base_path/bin/clang"
   } else if (is_posix) {
-    import("//build/toolchain/posix/settings.gni")
+    import("$gn_build_dir/toolchain/posix/settings.gni")
     _exe = clang_cc
   } else {
     assert(false, "GCC isn't supported on this platform")

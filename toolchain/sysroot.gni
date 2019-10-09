@@ -17,7 +17,7 @@ if (current_os == target_os && current_cpu == target_cpu &&
     target_sysroot != "") {
   sysroot = target_sysroot
 } else if (is_android) {
-  import("//build/toolchain/android/settings.gni")
+  import("$gn_build_dir/toolchain/android/settings.gni")
   if (current_cpu == "x86") {
     sysroot = "$android_ndk_root/$x86_android_sysroot_subdir"
   } else if (current_cpu == "arm") {
@@ -34,10 +34,10 @@ if (current_os == target_os && current_cpu == target_cpu &&
     sysroot = ""
   }
 } else if (is_mac) {
-  import("//build/toolchain/mac/mac_sdk.gni")
+  import("$gn_build_dir/toolchain/mac/mac_sdk.gni")
   sysroot = mac_sdk_path
 } else if (is_ios) {
-  import("//build/toolchain/mac/ios_sdk.gni")
+  import("$gn_build_dir/toolchain/mac/ios_sdk.gni")
   sysroot = ios_sdk_path
 } else {
   sysroot = ""

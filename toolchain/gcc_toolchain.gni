@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config/sanitizers/sanitizers.gni")
-import("//build/toolchain/cc_wrapper.gni")
-import("//build/toolchain/toolchain.gni")
+import("$gn_build_dir/config/sanitizers/sanitizers.gni")
+import("$gn_build_dir/toolchain/cc_wrapper.gni")
+import("$gn_build_dir/toolchain/toolchain.gni")
 
 # This template defines a toolchain for something that works like gcc
 # (including clang).
@@ -245,7 +245,7 @@ template("gcc_toolchain") {
       # command, in case the host does not use a POSIX shell (e.g. compiling
       # POSIX-like toolchains such as NaCl on Windows).
       ar_wrapper =
-          rebase_path("//build/toolchain/gcc_ar_wrapper.py", root_build_dir)
+          rebase_path("$gn_build_dir/toolchain/gcc_ar_wrapper.py", root_build_dir)
 
       # BSD ar doesn't support response files
       if (!is_freebsd || nm != "nm") {
@@ -272,7 +272,7 @@ template("gcc_toolchain") {
       soname = "{{target_output_name}}{{output_extension}}"  # e.g. "libfoo.so".
       sofile = "{{output_dir}}/$soname"  # Possibly including toolchain dir.
       rspfile = sofile + ".rsp"
-      pool = "//build/toolchain:link_pool($default_toolchain)"
+      pool = "$gn_build_dir/toolchain:link_pool($default_toolchain)"
 
       if (defined(invoker.strip)) {
         unstripped_sofile = "{{root_out_dir}}/lib.unstripped/$soname"
@@ -307,7 +307,7 @@ template("gcc_toolchain") {
       # This needs a Python script to avoid using a complex shell command
       # requiring sh control structures, pipelines, and POSIX utilities.
       # The host might not have a POSIX shell and utilities (e.g. Windows).
-      solink_wrapper = rebase_path("//build/toolchain/gcc_solink_wrapper.py")
+      solink_wrapper = rebase_path("$gn_build_dir/toolchain/gcc_solink_wrapper.py")
       command = "$python_path \"$solink_wrapper\" --readelf=\"$readelf\" --nm=\"$nm\" $strip_switch--sofile=\"$unstripped_sofile\" --tocfile=\"$tocfile\"$map_switch --output=\"$sofile\" -- $link_command"
 
       rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive $solink_libs_section_prefix {{libs}} $solink_libs_section_postfix"
@@ -348,7 +348,7 @@ template("gcc_toolchain") {
       soname = "{{target_output_name}}{{output_extension}}"  # e.g. "libfoo.so".
       sofile = "{{output_dir}}/$soname"
       rspfile = sofile + ".rsp"
-      pool = "//build/toolchain:link_pool($default_toolchain)"
+      pool = "$gn_build_dir/toolchain:link_pool($default_toolchain)"
 
       if (defined(invoker.strip)) {
         unstripped_sofile = "{{root_out_dir}}/lib.unstripped/$soname"
@@ -392,7 +392,7 @@ template("gcc_toolchain") {
       outfile = "{{output_dir}}/$exename"
       rspfile = "$outfile.rsp"
       unstripped_outfile = outfile
-      pool = "//build/toolchain:link_pool($default_toolchain)"
+      pool = "$gn_build_dir/toolchain:link_pool($default_toolchain)"
 
       # Use this for {{output_extension}} expansions unless a target manually
       # overrides it (in which case {{output_extension}} will be what the target
@@ -422,7 +422,7 @@ template("gcc_toolchain") {
       }
 
       link_wrapper =
-          rebase_path("//build/toolchain/gcc_link_wrapper.py", root_build_dir)
+          rebase_path("$gn_build_dir/toolchain/gcc_link_wrapper.py", root_build_dir)
       command = "$python_path \"$link_wrapper\" --output=\"$outfile\"$strip_switch$map_switch -- $link_command"
       description = "LINK $outfile"
       rspfile_content = "{{inputs}}"
@@ -442,7 +442,7 @@ template("gcc_toolchain") {
 
     # These two are really entirely generic, but have to be repeated in
     # each toolchain because GN doesn't allow a template to be used here.
-    # See //build/toolchain/toolchain.gni for details.
+    # See $gn_build_dir/toolchain/toolchain.gni for details.
     tool("stamp") {
       command = stamp_command
       description = stamp_description
@@ -453,7 +453,7 @@ template("gcc_toolchain") {
     }
 
     tool("action") {
-      pool = "//build/toolchain:action_pool($default_toolchain)"
+      pool = "$gn_build_dir/toolchain:action_pool($default_toolchain)"
     }
 
     forward_variables_from(invoker, [ "deps" ])

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/concurrent_links.gni")
+import("$gn_build_dir/toolchain/concurrent_links.gni")
 
 declare_args() {
   # Pool for action tasks.

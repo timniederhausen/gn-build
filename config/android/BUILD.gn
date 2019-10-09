@@ -2,12 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/android/settings.gni")
-import("//build/config/sanitizers/sanitizers.gni")
+import("$gn_build_dir/toolchain/android/settings.gni")
+import("$gn_build_dir/config/sanitizers/sanitizers.gni")
 
 assert(is_android)
 
-# This is included by reference in the //build/config/compiler config that
+# This is included by reference in the $gn_build_dir/config/compiler config that
 # is applied to all targets. It is here to separate out the logic that is
 # Android-only.
 config("compiler") {
@@ -86,7 +86,7 @@ config("compiler") {
   asmflags = cflags
 }
 
-# This is included by reference in the //build/config:runtime_library
+# This is included by reference in the $gn_build_dir/config:runtime_library
 # config that is applied to all targets. It is here to separate out the logic
 # that is Android-only. Please see that target for advice on what should go in
 # :runtime_library vs. :compiler.
@@ -202,8 +202,8 @@ config("executable_config") {
 # targets by default. You can override whether the cygprofile instrumentation is
 # used on a per-target basis:
 #
-# configs -= [ "//build/config/android:default_cygprofile_instrumentation" ]
-# configs += [ "//build/config/android:no_cygprofile_instrumentation" ]
+# configs -= [ "$gn_build_dir/config/android:default_cygprofile_instrumentation" ]
+# configs += [ "$gn_build_dir/config/android:no_cygprofile_instrumentation" ]
 
 config("default_cygprofile_instrumentation") {
   if (use_order_profiling) {

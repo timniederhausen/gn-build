@@ -4,7 +4,7 @@
 
 assert(is_win)
 
-import("//build/toolchain/win/settings.gni")
+import("$gn_build_dir/toolchain/win/settings.gni")
 
 # This template defines a rule to invoke the MS IDL compiler. The generated
 # source code will be compiled and linked into targets that depend on this.
@@ -41,7 +41,7 @@ template("midl") {
   action_foreach(action_name) {
     visibility = [ ":$source_set_name" ]
 
-    script = "//build/toolchain/win/midl_wrapper.py"
+    script = "$gn_build_dir/toolchain/win/midl_wrapper.py"
 
     sources = invoker.sources
 
@@ -94,6 +94,6 @@ template("midl") {
       ":$action_name",
     ]
 
-    configs += [ "//build/config/win:midl_warnings" ]
+    configs += [ "$gn_build_dir/config/win:midl_warnings" ]
   }
 }

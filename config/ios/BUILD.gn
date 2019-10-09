@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/toolchain/sysroot.gni")
-import("//build/toolchain/mac/ios_sdk.gni")
+import("$gn_build_dir/toolchain/sysroot.gni")
+import("$gn_build_dir/toolchain/mac/ios_sdk.gni")
 
-# This is included by reference in the //build/config/compiler:runtime_library
+# This is included by reference in the $gn_build_dir/config/compiler:runtime_library
 # config that is applied to all targets. It is here to separate out the logic
 # that is iOS-only. Please see that target for advice on what should go in
 # :runtime_library vs. :compiler.
