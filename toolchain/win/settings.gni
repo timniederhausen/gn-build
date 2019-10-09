@@ -26,6 +26,9 @@ declare_args() {
   # Microsoft compiler version number clang-cl will report in _MSC_VER
   # (Defaults to the default version associated with the chosen VS version.)
   clang_msc_ver = 0
+
+  # Allows us to avoid multiple toolchain.py invocations for multi-toolchain builds.
+  cached_toolchain_data = ""
 }
 
 assert(visual_studio_version != "", "visual_studio_version must be non-empty")
@@ -54,21 +57,25 @@ if (visual_studio_path == "") {
   visual_studio_path = "default"
 }
 
-toolchain_data = exec_script("toolchain.py",
-                             [
-                               "setup_toolchain",
-                               visual_studio_version,
-                               visual_studio_path,
-                               sys_include_prefix,
-                               windows_sdk_version,
+if (cached_toolchain_data != "") {
+  toolchain_data = cached_toolchain_data
+} else {
+  toolchain_data = exec_script("toolchain.py",
+                               [
+                                 "setup_toolchain",
+                                 visual_studio_version,
+                                 visual_studio_path,
+                                 sys_include_prefix,
+                                 windows_sdk_version,
 
-                               # Don't use clang_base_path directly, so we can
-                               # skip clang detection if not needed
-                               # (i.e. !is_clang).
-                               _clang_base_path_arg,
-                               _clang_msc_ver,
-                             ],
-                             "scope")
+                                 # Don't use clang_base_path directly, so we can
+                                 # skip clang detection if not needed
+                                 # (i.e. !is_clang).
+                                 _clang_base_path_arg,
+                                 _clang_msc_ver,
+                               ],
+                               "scope")
+}
 
 visual_studio_version = toolchain_data.visual_studio_version
 visual_studio_path = toolchain_data.visual_studio_path

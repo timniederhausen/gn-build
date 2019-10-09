@@ -144,7 +144,7 @@ def _FormatAsEnvironmentBlock(envvar_dict):
 
 def _ParseClVersion(out):
   for line in out.splitlines():
-    m = re.search(r'Version ([0-9.]+)', line)
+    m = re.search(r' ([0-9.]+)', line)
     if not m:
       continue
 

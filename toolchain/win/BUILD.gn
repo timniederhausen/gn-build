@@ -43,6 +43,8 @@ template("msvc_toolchain") {
         forward_variables_from(invoker.toolchain_args, "*")
       }
 
+      cached_toolchain_data = toolchain_data
+
       # This value needs to be passed through unchanged.
       host_toolchain = host_toolchain
     }
@@ -51,8 +53,10 @@ template("msvc_toolchain") {
     lib_switch = ""
     lib_dir_switch = "/LIBPATH:"
 
-    # Object files go in this directory.
-    object_subdir = "{{target_out_dir}}/{{label_name}}/{{source_root_relative_dir}}"
+    # Generic compiler output path
+    # Use label_name instead of target_output_name since labels will generally
+    # have no spaces and will be unique in the directory.
+    object_path = "{{target_out_dir}}/{{label_name}}/{{source_name_part}}"
 
     env = invoker.environment
 
@@ -123,7 +127,7 @@ template("msvc_toolchain") {
       depsformat = "msvc"
       description = "CC {{output}}"
       outputs = [
-        "$object_subdir/{{source_name_part}}.obj",
+        "$object_path.obj",
       ]
 
       # Label names may have spaces in them so the pdbname must be quoted. The
@@ -141,7 +145,7 @@ template("msvc_toolchain") {
       depsformat = "msvc"
       description = "CXX {{output}}"
       outputs = [
-        "$object_subdir/{{source_name_part}}.obj",
+        "$object_path.obj",
       ]
 
       # See comment in CC tool about quoting.
@@ -154,7 +158,7 @@ template("msvc_toolchain") {
       command = "$python_path $rc_wrapper $env {{source}} {{output}} rc.exe {{defines}} {{include_dirs}}"
       depsformat = "msvc"
       outputs = [
-        "$object_subdir/{{source_name_part}}.res",
+        "$object_path.res",
       ]
       description = "RC {{output}}"
     }
@@ -170,7 +174,7 @@ template("msvc_toolchain") {
       command = "$python_path $asm_wrapper $env $ml {{defines}} {{include_dirs}} {{asmflags}} /c /Fo{{output}} {{source}}"
       description = "ASM {{output}}"
       outputs = [
-        "$object_subdir/{{source_name_part}}.obj",
+        "$object_path.obj",
       ]
     }
 

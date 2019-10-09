@@ -125,10 +125,10 @@ template("mac_toolchain") {
     lib_switch = "-l"
     lib_dir_switch = "-L"
 
-    # Object files go in this directory. Use label_name instead of
-    # target_output_name since labels will generally have no spaces and will be
-    # unique in the directory.
-    object_subdir = "{{target_out_dir}}/{{label_name}}/{{source_root_relative_dir}}"
+    # Generic compiler output path (they all produce object files)
+    # Use label_name instead of target_output_name since labels will generally
+    # have no spaces and will be unique in the directory.
+    object_path = "{{target_out_dir}}/{{label_name}}/{{source_name_part}}.o"
 
     # If dSYMs are enabled, this flag will be added to the link tools.
     if (_enable_dsyms) {
@@ -156,7 +156,7 @@ template("mac_toolchain") {
       depsformat = "gcc"
       description = "CC {{output}}"
       outputs = [
-        "$object_subdir/{{source_name_part}}.o",
+        object_path,
       ]
     }
 
@@ -167,7 +167,7 @@ template("mac_toolchain") {
       depsformat = "gcc"
       description = "CXX {{output}}"
       outputs = [
-        "$object_subdir/{{source_name_part}}.o",
+        object_path,
       ]
     }
 
@@ -178,7 +178,7 @@ template("mac_toolchain") {
       depsformat = "gcc"
       description = "ASM {{output}}"
       outputs = [
-        "$object_subdir/{{source_name_part}}.o",
+        object_path,
       ]
     }
 
@@ -189,7 +189,7 @@ template("mac_toolchain") {
       depsformat = "gcc"
       description = "OBJC {{output}}"
       outputs = [
-        "$object_subdir/{{source_name_part}}.o",
+        object_path,
       ]
     }
 
@@ -200,7 +200,7 @@ template("mac_toolchain") {
       depsformat = "gcc"
       description = "OBJCXX {{output}}"
       outputs = [
-        "$object_subdir/{{source_name_part}}.o",
+        object_path,
       ]
     }
 

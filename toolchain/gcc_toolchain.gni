@@ -202,8 +202,10 @@ template("gcc_toolchain") {
     lib_switch = "-l"
     lib_dir_switch = "-L"
 
-    # Object files go in this directory.
-    object_subdir = "{{target_out_dir}}/{{label_name}}/{{source_root_relative_dir}}"
+    # Generic compiler output path (they all produce object files)
+    # Use label_name instead of target_output_name since labels will generally
+    # have no spaces and will be unique in the directory.
+    object_path = "{{target_out_dir}}/{{label_name}}/{{source_name_part}}.o"
 
     tool("cc") {
       depfile = "{{output}}.d"
@@ -212,7 +214,7 @@ template("gcc_toolchain") {
       precompiled_header_type = "gcc"
       description = "CC {{output}}"
       outputs = [
-        "$object_subdir/{{source_name_part}}.o",
+        object_path,
       ]
     }
 
@@ -223,7 +225,7 @@ template("gcc_toolchain") {
       precompiled_header_type = "gcc"
       description = "CXX {{output}}"
       outputs = [
-        "$object_subdir/{{source_name_part}}.o",
+        object_path,
       ]
     }
 
@@ -234,7 +236,7 @@ template("gcc_toolchain") {
       depsformat = "gcc"
       description = "ASM {{output}}"
       outputs = [
-        "$object_subdir/{{source_name_part}}.o",
+        object_path,
       ]
     }
 
