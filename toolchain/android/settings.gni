@@ -149,7 +149,7 @@ android_libcpp_root = "$android_ndk_root/sources/cxx-stl/llvm-libc++"
 if (current_cpu == "x86") {
   android_app_abi = "x86"
 } else if (current_cpu == "arm") {
-  import("$gn_build_dir/config/arm.gni")
+  import("$gn_root/config/arm.gni")
   if (arm_version < 7) {
     android_app_abi = "armeabi"
   } else {
@@ -197,9 +197,9 @@ if (target_cpu == "arm64") {
 if (defined(android_secondary_abi_cpu)) {
   if (is_clang) {
     android_secondary_abi_toolchain =
-        "$gn_build_dir/toolchain/android:android_clang_${android_secondary_abi_cpu}"
+        "$gn_root/toolchain/android:android_clang_${android_secondary_abi_cpu}"
   } else {
     android_secondary_abi_toolchain =
-        "$gn_build_dir/toolchain/android:android_${android_secondary_abi_cpu}"
+        "$gn_root/toolchain/android:android_${android_secondary_abi_cpu}"
   }
 }

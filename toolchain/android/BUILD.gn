@@ -2,11 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$gn_build_dir/toolchain/android/settings.gni")
-import("$gn_build_dir/toolchain/toolchain.gni")
-import("$gn_build_dir/toolchain/sysroot.gni")
-import("$gn_build_dir/toolchain/gcc_toolchain.gni")
-import("$gn_build_dir/toolchain/clang.gni")
+import("$gn_root/toolchain/android/settings.gni")
+import("$gn_root/toolchain/toolchain.gni")
+import("$gn_root/toolchain/sysroot.gni")
+import("$gn_root/toolchain/gcc_toolchain.gni")
+import("$gn_root/toolchain/clang.gni")
 
 # The Android GCC toolchains share most of the same parameters, so we have this
 # wrapper around gcc_toolchain to avoid duplication of logic.

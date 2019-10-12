@@ -23,7 +23,7 @@
 # targets.
 #
 # Generally you will just want the defaults for the Chrome build. In this case
-# the binary should just depend on one of the targets in $gn_build_dir/win/. There
+# the binary should just depend on one of the targets in $gn_root/win/. There
 # are also individual manifest files in that directory you can reference via
 # the *_manifest variables defined below to pick and choose only some defaults.
 # You might combine these with a custom manifest file to get specific behavior.
@@ -73,7 +73,7 @@ if (is_win) {
     action(manifest_action_name) {
       visibility = [ ":$source_set_name" ]
 
-      script = "$gn_build_dir/toolchain/win/manifest_wrapper.py"
+      script = "$gn_root/toolchain/win/manifest_wrapper.py"
 
       assert(defined(invoker.sources),
              "\"sources\" must be defined for a windows_manifest target")
@@ -106,7 +106,7 @@ if (is_win) {
     action(rc_action_name) {
       visibility = [ ":$source_set_name" ]
 
-      script = "$gn_build_dir/toolchain/win/manifest_to_rc.py"
+      script = "$gn_root/toolchain/win/manifest_to_rc.py"
 
       outputs = [
         rcfile,

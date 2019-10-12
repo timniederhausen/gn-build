@@ -1,8 +1,8 @@
-import("$gn_build_dir/toolchain/sysroot.gni")
+import("$gn_root/toolchain/sysroot.gni")
 
 assert(is_posix)
 
-# This is included by reference in the $gn_build_dir/config/compiler config that
+# This is included by reference in the $gn_root/config/compiler config that
 # is applied to all targets. It is here to separate out the logic that is
 # Posix-only.
 config("compiler") {
@@ -15,7 +15,7 @@ config("compiler") {
   }
 }
 
-# This is included by reference in the $gn_build_dir/config/compiler:runtime_library
+# This is included by reference in the $gn_root/config/compiler:runtime_library
 # config that is applied to all targets. It is here to separate out the logic
 # that is Posix-only. Please see that target for advice on what should go in
 # :runtime_library vs. :compiler.

@@ -2,28 +2,28 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$gn_build_dir/config/compiler.gni")
-import("$gn_build_dir/config/sanitizers/sanitizers.gni")
-import("$gn_build_dir/toolchain/toolchain.gni")
-import("$gn_build_dir/toolchain/clang.gni")
+import("$gn_root/config/compiler.gni")
+import("$gn_root/config/sanitizers/sanitizers.gni")
+import("$gn_root/toolchain/toolchain.gni")
+import("$gn_root/toolchain/clang.gni")
 
 if (current_cpu == "arm" || current_cpu == "arm64") {
-  import("$gn_build_dir/config/arm.gni")
+  import("$gn_root/config/arm.gni")
 }
 
 if (current_cpu == "mipsel" || current_cpu == "mips64el") {
-  import("$gn_build_dir/config/mips.gni")
+  import("$gn_root/config/mips.gni")
 }
 
 if (is_mac) {
-  import("$gn_build_dir/toolchain/mac/settings.gni")
+  import("$gn_root/toolchain/mac/settings.gni")
 }
 
 if (is_android) {
-  import("$gn_build_dir/toolchain/android/settings.gni")
+  import("$gn_root/toolchain/android/settings.gni")
 }
 
-import("$gn_build_dir/toolchain/compiler_version.gni")
+import("$gn_root/toolchain/compiler_version.gni")
 
 declare_args() {
   # Whether or not we should turn on incremental LTCG. Only affects the VS
@@ -133,16 +133,16 @@ config("compiler") {
   # categories here, add it to the associated file to keep this shared config
   # smaller.
   if (is_win) {
-    configs += [ "$gn_build_dir/config/win:compiler" ]
+    configs += [ "$gn_root/config/win:compiler" ]
   } else if (is_android) {
-    configs += [ "$gn_build_dir/config/android:compiler" ]
+    configs += [ "$gn_root/config/android:compiler" ]
   } else if (is_ios || is_mac) {
-    configs += [ "$gn_build_dir/config/mac:compiler" ]
+    configs += [ "$gn_root/config/mac:compiler" ]
   }
 
   # Applies to all Posix systems.
   if (is_posix) {
-    configs += [ "$gn_build_dir/config/posix:compiler" ]
+    configs += [ "$gn_root/config/posix:compiler" ]
   }
 
   # See the definitions below.
@@ -383,7 +383,7 @@ config("extra_flags") {
 
 # This is separate from :compiler (and not even a sub-config there)
 # so that some targets can remove it from the list with:
-#   configs -= [ "$gn_build_dir/config:pthread" ]
+#   configs -= [ "$gn_root/config:pthread" ]
 config("pthread") {
   if (is_linux || is_freebsd) {
     cflags = [ "-pthread" ]
@@ -601,7 +601,7 @@ config("stack_protection") {
 
 # This is separate from :compiler_codegen (and not even a sub-config there)
 # so that some targets can remove it from the list with:
-#   configs -= [ "$gn_build_dir/config/compiler:stackrealign" ]
+#   configs -= [ "$gn_root/config/compiler:stackrealign" ]
 config("stackrealign") {
   if (current_cpu == "x86") {
     if (is_clang && (is_freebsd || is_linux)) {
@@ -757,17 +757,17 @@ config("runtime_library") {
   # categories here, add it to the associated file to keep this shared config
   # smaller.
   if (is_win) {
-    configs += [ "$gn_build_dir/config/win:runtime_library" ]
+    configs += [ "$gn_root/config/win:runtime_library" ]
   } else if (is_ios) {
-    configs += [ "$gn_build_dir/config/ios:runtime_library" ]
+    configs += [ "$gn_root/config/ios:runtime_library" ]
   } else if (is_mac) {
-    configs += [ "$gn_build_dir/config/mac:runtime_library" ]
+    configs += [ "$gn_root/config/mac:runtime_library" ]
   } else if (is_android) {
-    configs += [ "$gn_build_dir/config/android:runtime_library" ]
+    configs += [ "$gn_root/config/android:runtime_library" ]
   }
 
   if (is_posix) {
-    configs += [ "$gn_build_dir/config/posix:runtime_library" ]
+    configs += [ "$gn_root/config/posix:runtime_library" ]
   }
 }
 
@@ -888,8 +888,8 @@ config("no_incompatible_pointer_warnings") {
 # You can override the optimization level on a per-target basis by removing the
 # default config and then adding the named one you want:
 #
-#   configs -= [ "$gn_build_dir/config/compiler:default_optimization" ]
-#   configs += [ "$gn_build_dir/config/compiler:optimize_max" ]
+#   configs -= [ "$gn_root/config/compiler:default_optimization" ]
+#   configs += [ "$gn_root/config/compiler:optimize_max" ]
 
 # Shared settings for both "optimize" and "optimize_max" configs.
 # IMPORTANT: On Windows "/O1" and "/O2" must go before the common flags.
@@ -1140,8 +1140,8 @@ config("afdo") {
 # You can override the symbol level on a per-target basis by removing the
 # default config and then adding the named one you want:
 #
-#   configs -= [ "$gn_build_dir/config:default_symbols" ]
-#   configs += [ "$gn_build_dir/config:symbols" ]
+#   configs -= [ "$gn_root/config:default_symbols" ]
+#   configs += [ "$gn_root/config:symbols" ]
 
 # Full symbols.
 config("symbols") {
@@ -1314,8 +1314,8 @@ config("default_libs") {
 # Windows linker setup for EXEs and DLLs.
 if (is_win) {
   _windows_linker_configs = [
-    "$gn_build_dir/config/win:sdk_link",
-    "$gn_build_dir/config/win:common_linker_setup",
+    "$gn_root/config/win:sdk_link",
+    "$gn_root/config/win:common_linker_setup",
   ]
 }
 
@@ -1327,15 +1327,15 @@ config("executable_config") {
     configs += _windows_linker_configs
   } else if (is_mac) {
     configs += [
-      "$gn_build_dir/config/mac:mac_dynamic_flags",
-      "$gn_build_dir/config/mac:mac_executable_flags",
+      "$gn_root/config/mac:mac_dynamic_flags",
+      "$gn_root/config/mac:mac_executable_flags",
     ]
   } else if (is_ios) {
-    configs += [ "$gn_build_dir/config/ios:ios_dynamic_flags" ]
+    configs += [ "$gn_root/config/ios:ios_dynamic_flags" ]
   } else if (is_posix) {
-    configs += [ "$gn_build_dir/config/posix:executable_ldconfig" ]
+    configs += [ "$gn_root/config/posix:executable_ldconfig" ]
     if (is_android) {
-      configs += [ "$gn_build_dir/config/android:executable_config" ]
+      configs += [ "$gn_root/config/android:executable_config" ]
     }
   }
 }
@@ -1349,8 +1349,8 @@ config("shared_library_config") {
   if (is_win) {
     configs += _windows_linker_configs
   } else if (is_mac) {
-    configs += [ "$gn_build_dir/config/mac:mac_dynamic_flags" ]
+    configs += [ "$gn_root/config/mac:mac_dynamic_flags" ]
   } else if (is_ios) {
-    configs += [ "$gn_build_dir/config/ios:ios_dynamic_flags" ]
+    configs += [ "$gn_root/config/ios:ios_dynamic_flags" ]
   }
 }

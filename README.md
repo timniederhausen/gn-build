@@ -24,7 +24,7 @@ branch contains the test/example project used by the CI tests.
 All variables described here are build args and can be overridden in the user's
 `args.gn` file.
 
-#### [`$gn_build_dir/config/BUILDCONFIG.gn`](config/BUILDCONFIG.gn)
+#### [`$gn_root/config/BUILDCONFIG.gn`](config/BUILDCONFIG.gn)
 
 (these variables are available everywhere)
 
@@ -37,7 +37,7 @@ All variables described here are build args and can be overridden in the user's
   By convention, all 3rd-party projects should end up in this directory, so they
   can depend on each other (e.g. $external/mysql_connector -> $external/zlib)
 
-#### [`$gn_build_dir/toolchain/clang.gni`](toolchain/clang.gni)
+#### [`$gn_root/toolchain/clang.gni`](toolchain/clang.gni)
 
 * `use_lld` (default: false): Use the new LLD linker.
   This requires `is_clang` to be true.
@@ -45,7 +45,7 @@ All variables described here are build args and can be overridden in the user's
   (without /bin). If you use Clang on Windows, you are required to set this,
   as the Clang installation isn't automatically detected.
 
-#### [`$gn_build_dir/toolchain/compiler_version.gni`](toolchain/compiler_version.gni)
+#### [`$gn_root/toolchain/compiler_version.gni`](toolchain/compiler_version.gni)
 
 * `gcc_version` (default: auto-detected): Version of the GCC compiler.
   **Note:** Auto-detection is toolchain-specific and happens only if GCC is the
@@ -64,7 +64,7 @@ All variables described here are build args and can be overridden in the user's
 
 ### Windows toolchain
 
-#### [`$gn_build_dir/toolchain/win/settings.gni`](toolchain/win/settings.gni)
+#### [`$gn_root/toolchain/win/settings.gni`](toolchain/win/settings.gni)
 
 * `visual_studio_version` (default: "latest"): Desired version of Visual Studio.
   If `visual_studio_path` is set, this must be the version of the VS installation
@@ -86,7 +86,7 @@ All variables described here are build args and can be overridden in the user's
 This is the default toolchain for POSIX operating systems,
 which is used for all POSIX systems that don't have special toolchains.
 
-#### [`$gn_build_dir/toolchain/posix/settings.gni`](toolchain/posix/settings.gni)
+#### [`$gn_root/toolchain/posix/settings.gni`](toolchain/posix/settings.gni)
 
 * `gcc_cc` (default: gcc): Path of the GCC C compiler executable.
   Does not have to be absolute.
@@ -101,7 +101,7 @@ which is used for all POSIX systems that don't have special toolchains.
 
 ### Mac/iOS toolchain
 
-#### [`$gn_build_dir/toolchain/mac/settings.gni`](toolchain/mac/settings.gni)
+#### [`$gn_root/toolchain/mac/settings.gni`](toolchain/mac/settings.gni)
 
 * `use_system_xcode` (default: true): Use the system install of Xcode for tools
   like ibtool, libtool, etc. This does not affect the compiler. When this
@@ -113,17 +113,17 @@ which is used for all POSIX systems that don't have special toolchains.
   `clang_base_path` needs to be set.
 * `enable_dsyms` (default: true): Produce dSYM files for targets that are
   configured to do so. dSYM generation is controlled globally as it is a
-  linker output (produced via the `$gn_build_dir/toolchain/mac/linker_driver.py`.
+  linker output (produced via the `$gn_root/toolchain/mac/linker_driver.py`.
   Enabling this will result in all shared library, loadable module, and
   executable targets having a dSYM generated.
 * `enable_stripping` (default: `is_official_build`): Strip symbols from linked
-  targets by default. If this is enabled, the $gn_build_dir/config/mac:strip_all
+  targets by default. If this is enabled, the $gn_root/config/mac:strip_all
   config will be applied to all linked targets. If custom stripping parameters
   are required, remove that config from a linked target and apply custom
-  `-Wcrl,strip` flags. See $gn_build_dir/toolchain/mac/linker_driver.py for more
+  `-Wcrl,strip` flags. See $gn_root/toolchain/mac/linker_driver.py for more
   information.
 
-#### [`$gn_build_dir/toolchain/mac/mac_sdk.gni`](toolchain/mac/mac_sdk.gni)
+#### [`$gn_root/toolchain/mac/mac_sdk.gni`](toolchain/mac/mac_sdk.gni)
 
 * `mac_sdk_min` (default: "10.10"): Minimum supported version of the Mac SDK.
 * `mac_deployment_target` (default: "10.9"): Minimum supported version of OSX.
@@ -132,7 +132,7 @@ which is used for all POSIX systems that don't have special toolchains.
   greater than or equal to `mac_sdk_min` is used.
 * `mac_sdk_name` (default: "macosx"): The SDK name as accepted by xcodebuild.
 
-#### [`$gn_build_dir/toolchain/mac/ios_sdk.gni`](toolchain/mac/ios_sdk.gni)
+#### [`$gn_root/toolchain/mac/ios_sdk.gni`](toolchain/mac/ios_sdk.gni)
 
 * `ios_sdk_path` (default: ""): Path to a specific version of the iOS SDK, not
   including a slash at the end. When empty this will use the default SDK based
@@ -152,7 +152,7 @@ which is used for all POSIX systems that don't have special toolchains.
 
 ### Android toolchain
 
-#### [`$gn_build_dir/toolchain/android/settings.gni`](toolchain/android/settings.gni)
+#### [`$gn_root/toolchain/android/settings.gni`](toolchain/android/settings.gni)
 
 * `android_ndk_root` (default: "$external/android_tools/ndk"):
   Path of the Android NDK.
@@ -180,6 +180,6 @@ it is recommended that you refrain from modifying large parts of the toolchains/
 If changes are necessary, consider contributing them back ;)
 
 For more complex projects, it might be feasible to use a custom build-config file
-that just `import()s` [`$gn_build_dir/config/BUILDCONFIG.gn`](config/BUILDCONFIG.gn) and then overrides
+that just `import()s` [`$gn_root/config/BUILDCONFIG.gn`](config/BUILDCONFIG.gn) and then overrides
 the defaults set inside `BUILDCONFIG.gn`. There's also GN's `default_args` scope, which can be used
 to provide project-specific argument overrides.

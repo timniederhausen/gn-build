@@ -6,17 +6,17 @@
 # some enhancements since the commands on Mac are slightly different than on
 # Linux.
 
-import("$gn_build_dir/toolchain/clang.gni")
+import("$gn_root/toolchain/clang.gni")
 if (is_ios) {
-  import("$gn_build_dir/toolchain/mac/ios_sdk.gni")
+  import("$gn_root/toolchain/mac/ios_sdk.gni")
 }
-import("$gn_build_dir/toolchain/mac/mac_sdk.gni")
+import("$gn_root/toolchain/mac/mac_sdk.gni")
 
 assert(host_os == "mac")
 
-import("$gn_build_dir/toolchain/cc_wrapper.gni")
-import("$gn_build_dir/toolchain/toolchain.gni")
-import("$gn_build_dir/toolchain/concurrent_links.gni")
+import("$gn_root/toolchain/cc_wrapper.gni")
+import("$gn_root/toolchain/toolchain.gni")
+import("$gn_root/toolchain/concurrent_links.gni")
 
 declare_args() {
   # Reduce the number of tasks using the copy_bundle_data and compile_xcassets
@@ -48,9 +48,9 @@ if (current_toolchain == default_toolchain) {
 tool_versions =
     exec_script("get_tool_mtime.py",
                 rebase_path([
-                              "$gn_build_dir/toolchain/mac/compile_xcassets.py",
-                              "$gn_build_dir/toolchain/mac/filter_libtool.py",
-                              "$gn_build_dir/toolchain/mac/linker_driver.py",
+                              "$gn_root/toolchain/mac/compile_xcassets.py",
+                              "$gn_root/toolchain/mac/filter_libtool.py",
+                              "$gn_root/toolchain/mac/linker_driver.py",
                             ],
                             root_build_dir),
                 "trim scope")
@@ -108,7 +108,7 @@ template("mac_toolchain") {
 
     linker_driver =
         "TOOL_VERSION=${tool_versions.linker_driver} " +
-        rebase_path("$gn_build_dir/toolchain/mac/linker_driver.py", root_build_dir)
+        rebase_path("$gn_root/toolchain/mac/linker_driver.py", root_build_dir)
 
     # On iOS, the final applications are assembled using lipo (to support fat
     # builds). The correct flags are passed to the linker_driver.py script
@@ -206,7 +206,7 @@ template("mac_toolchain") {
 
     tool("alink") {
       script =
-          rebase_path("$gn_build_dir/toolchain/mac/filter_libtool.py", root_build_dir)
+          rebase_path("$gn_root/toolchain/mac/filter_libtool.py", root_build_dir)
       command = "$env_wrapper rm -f {{output}} && TOOL_VERSION=${tool_versions.filter_libtool} python $script libtool -static {{arflags}} -o {{output}} {{inputs}}"
       description = "LIBTOOL-STATIC {{output}}"
       outputs = [
@@ -220,7 +220,7 @@ template("mac_toolchain") {
     tool("solink") {
       dylib = "{{output_dir}}/{{target_output_name}}{{output_extension}}"  # eg "./libfoo.dylib"
       rspfile = dylib + ".rsp"
-      pool = "$gn_build_dir/toolchain:link_pool($default_toolchain)"
+      pool = "$gn_root/toolchain:link_pool($default_toolchain)"
 
       # These variables are not built into GN but are helpers that implement
       # (1) linking to produce a .dylib, (2) extracting the symbols from that
@@ -280,7 +280,7 @@ template("mac_toolchain") {
     tool("solink_module") {
       sofile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"  # eg "./libfoo.so"
       rspfile = sofile + ".rsp"
-      pool = "$gn_build_dir/toolchain:link_pool($default_toolchain)"
+      pool = "$gn_root/toolchain:link_pool($default_toolchain)"
 
       link_command = "$env_wrapper $linker_driver $ld -bundle {{ldflags}} -o \"$sofile\" -Wl,-filelist,\"$rspfile\""
       link_command += dsym_switch + " {{solibs}} {{libs}}"
@@ -311,7 +311,7 @@ template("mac_toolchain") {
     tool("link") {
       outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
       rspfile = "$outfile.rsp"
-      pool = "$gn_build_dir/toolchain:link_pool($default_toolchain)"
+      pool = "$gn_root/toolchain:link_pool($default_toolchain)"
 
       # Note about --filelist: Apple's linker reads the file list file and
       # interprets each newline-separated chunk of text as a file name. It
@@ -340,7 +340,7 @@ template("mac_toolchain") {
 
     # These two are really entirely generic, but have to be repeated in
     # each toolchain because GN doesn't allow a template to be used here.
-    # See $gn_build_dir/toolchain/toolchain.gni for details.
+    # See $gn_root/toolchain/toolchain.gni for details.
     tool("stamp") {
       command = stamp_command
       description = stamp_description
@@ -379,7 +379,7 @@ template("mac_toolchain") {
     }
 
     tool("compile_xcassets") {
-      _tool = rebase_path("$gn_build_dir/toolchain/mac/compile_xcassets.py",
+      _tool = rebase_path("$gn_root/toolchain/mac/compile_xcassets.py",
                           root_build_dir)
       if (is_ios) {
         _sdk_name = ios_sdk_name
@@ -398,7 +398,7 @@ template("mac_toolchain") {
     }
 
     tool("action") {
-      pool = "$gn_build_dir/toolchain:action_pool($default_toolchain)"
+      pool = "$gn_root/toolchain:action_pool($default_toolchain)"
     }
   }
 }

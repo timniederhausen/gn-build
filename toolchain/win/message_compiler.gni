@@ -38,7 +38,7 @@ template("message_compiler") {
       forward_variables_from(invoker, [ "visibility" ])
     }
 
-    script = "$gn_build_dir/toolchain/win/message_compiler.py"
+    script = "$gn_root/toolchain/win/message_compiler.py"
 
     outputs = [
       "$target_gen_dir/{{source_name_part}}.h",

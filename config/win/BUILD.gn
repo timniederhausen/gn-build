@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$gn_build_dir/config/compiler.gni")
-import("$gn_build_dir/config/sanitizers/sanitizers.gni")
-import("$gn_build_dir/toolchain/win/settings.gni")
-import("$gn_build_dir/toolchain/toolchain.gni")
+import("$gn_root/config/compiler.gni")
+import("$gn_root/config/sanitizers/sanitizers.gni")
+import("$gn_root/toolchain/win/settings.gni")
+import("$gn_root/toolchain/toolchain.gni")
 
 assert(is_win)
 
@@ -37,7 +37,7 @@ declare_args() {
   win_compiler_timing = false
 }
 
-# This is included by reference in the $gn_build_dir/config/compiler config that
+# This is included by reference in the $gn_root/config/compiler config that
 # is applied to all targets. It is here to separate out the logic that is
 # Windows-only.
 config("compiler") {
@@ -134,7 +134,7 @@ config("vs_code_analysis") {
   }
 }
 
-# This is included by reference in the $gn_build_dir/config/compiler:runtime_library
+# This is included by reference in the $gn_root/config/compiler:runtime_library
 # config that is applied to all targets. It is here to separate out the logic
 # that is Windows-only. Please see that target for advice on what should go in
 # :runtime_library vs. :compiler.

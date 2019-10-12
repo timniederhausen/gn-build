@@ -112,7 +112,7 @@ class UnitTest(unittest.TestCase):
 
     # References to functions should raise an exception.
     with self.assertRaises(gn_helpers.GNException):
-      gn_helpers.FromGNArgs('foo = exec_script("$gn_build_dir/baz.py")')
+      gn_helpers.FromGNArgs('foo = exec_script("$gn_root/baz.py")')
 
     # Underscores in identifiers should work.
     self.assertEqual(gn_helpers.FromGNArgs('_foo = true'),

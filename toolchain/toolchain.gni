@@ -44,9 +44,9 @@ if (is_posix) {
 stamp_description = "STAMP {{output}}"
 copy_description = "COPY {{source}} {{output}}"
 if (host_os == "win") {
-  stamp_path = rebase_path("$gn_build_dir/toolchain/win/stamp.py", root_build_dir)
+  stamp_path = rebase_path("$gn_root/toolchain/win/stamp.py", root_build_dir)
   copy_path =
-      rebase_path("$gn_build_dir/toolchain/win/recursive_mirror.py", root_build_dir)
+      rebase_path("$gn_root/toolchain/win/recursive_mirror.py", root_build_dir)
 
   stamp_command = "cmd /c type nul > \"{{output}}\""
   copy_command = "$python_path $copy_path {{source}} {{output}}"
