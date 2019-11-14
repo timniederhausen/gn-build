@@ -20,6 +20,8 @@ environment:
     - GN_ARGS: "visual_studio_version=\\\"2015\\\" clang_base_path=\\\"C:\\Program Files\\LLVM\\\" is_clang=true is_official_build=true"
     - GN_ARGS: "visual_studio_version=\\\"2017\\\""
       APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2017
+    - GN_ARGS: "visual_studio_version=\\\"2019\\\""
+      APPVEYOR_BUILD_WORKER_IMAGE: Visual Studio 2019
 
 matrix:
   fast_finish: true

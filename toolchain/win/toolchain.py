@@ -159,10 +159,13 @@ def _ParseClVersion(out):
 
 
 def _GetClangMscVersionFromYear(version_as_year):
+  # Corresponds to the _MSC_VER value listed here:
+  # https://docs.microsoft.com/en-us/cpp/preprocessor/predefined-macros
   year_to_version = {
     '2013': '1800',
     '2015': '1900',
     '2017': '1910',
+    '2019': '1920',
   }
   if version_as_year not in year_to_version:
     raise Exception(('Visual Studio version %s (from version_as_year)'
@@ -209,6 +212,7 @@ def DetectVisualStudioPath(version_as_year):
     '2013': '12.0',
     '2015': '14.0',
     '2017': '15.0',
+    '2019': '16.0',
   }
 
   if version_as_year not in year_to_version:
@@ -216,7 +220,7 @@ def DetectVisualStudioPath(version_as_year):
                      ' not supported. Supported versions are: %s') % (
                       version_as_year, ', '.join(year_to_version.keys())))
 
-  if version_as_year == '2017':
+  if version_as_year in ('2017', '2019'):
     # The VC++ 2017 install location needs to be located using COM instead of
     # the registry. For details see:
     # https://blogs.msdn.microsoft.com/heaths/2016/09/15/changes-to-visual-studio-15-setup/
@@ -234,9 +238,9 @@ def DetectVisualStudioPath(version_as_year):
         except subprocess.CalledProcessError:
           pass
 
-    root_path = r'C:\Program Files (x86)\Microsoft Visual Studio\2017'
+    root_path = r'C:\Program Files (x86)\Microsoft Visual Studio\\' + version_as_year
     for edition in ['Professional', 'Community', 'Enterprise', 'BuildTools']:
-      path = os.environ.get('vs2017_install', os.path.join(root_path, edition))
+      path = os.environ.get('vs{}_install'.format(version_as_year), os.path.join(root_path, edition))
       if os.path.exists(path):
         return path
   else:
@@ -255,7 +259,7 @@ def DetectVisualStudioPath(version_as_year):
 
 
 def FindLatestVisualStudio():
-  for version_as_year in ['2017', '2015', '2013']:
+  for version_as_year in ['2019', '2017', '2015', '2013']:
     try:
       return version_as_year, DetectVisualStudioPath(version_as_year)
     except Exception:

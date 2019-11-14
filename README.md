@@ -6,7 +6,7 @@ This project provides a work-in-progress standalone version of the toolchains an
 
 The toolchains have been tested on the following platforms:
 
-* Windows (MSVC 2013/2015/2017, Clang 3.8)
+* Windows (MSVC 2013/2015/2017/2019, Clang 3.8)
 * FreeBSD (GCC 5, Clang 3.7)
 * Linux (GCC 4.9, Clang 3.8)
 * OS X (Xcode 7.3.1)
