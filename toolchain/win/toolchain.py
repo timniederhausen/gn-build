@@ -221,22 +221,22 @@ def DetectVisualStudioPath(version_as_year):
                       version_as_year, ', '.join(year_to_version.keys())))
 
   if version_as_year in ('2017', '2019'):
-    # The VC++ 2017 install location needs to be located using COM instead of
+    # The VC++ 2017+ install location needs to be located using COM instead of
     # the registry. For details see:
     # https://blogs.msdn.microsoft.com/heaths/2016/09/15/changes-to-visual-studio-15-setup/
     vswhere_path = os.path.expandvars(_VSWHERE_PATH)
     if os.path.exists(vswhere_path):
-        version = year_to_version[version_as_year]
-        try:
-          out = json.loads(subprocess.check_output([
-              vswhere_path, '-version',
-              '[{},{})'.format(float(version), float(version) + 1),
-              '-legacy', '-format', 'json', '-utf8',
-          ]))
-          if out:
-              return out[0]['installationPath']
-        except subprocess.CalledProcessError:
-          pass
+      version = year_to_version[version_as_year]
+      try:
+        out = json.loads(subprocess.check_output([
+          vswhere_path, '-version',
+          '[{},{})'.format(float(version), float(version) + 1),
+          '-legacy', '-format', 'json', '-utf8',
+        ]))
+        if out:
+          return out[0]['installationPath']
+      except subprocess.CalledProcessError:
+        pass
 
     root_path = r'C:\Program Files (x86)\Microsoft Visual Studio\\' + version_as_year
     for edition in ['Professional', 'Community', 'Enterprise', 'BuildTools']:
@@ -272,7 +272,7 @@ def GetVsPath(version_as_year):
   print(DetectVisualStudioPath(version_as_year))
 
 
-def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None,
+def SetupToolchain(version_as_year, vs_path, sdk_version=None,
                    clang_base_path=None, clang_msc_ver=None):
   cpus = ('x86', 'x64', 'arm', 'arm64')
 
@@ -296,10 +296,10 @@ def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None,
   windows_sdk_paths = {}
   envs = {}
   for (cpu, is_uwp) in itertools.product(cpus, (False, True)):
-    suffix = '_uwp' if is_uwp else ''
+    name = cpu + ('_uwp' if is_uwp else '')
     # Extract environment variables for subprocesses.
-    env = _ExtractImportantEnvironment(_ProcessSpawnResult(processes[cpu + suffix]))
-    envs[cpu + suffix] = env
+    env = _ExtractImportantEnvironment(_ProcessSpawnResult(processes[name]))
+    envs[name] = env
 
     vc_bin_dir = ''
     vc_lib_path = ''
@@ -328,24 +328,61 @@ def SetupToolchain(version_as_year, vs_path, include_prefix, sdk_version=None,
         vc_lib_um_path = os.path.realpath(path)
         break
 
-    windows_sdk_paths[cpu + suffix] = os.path.realpath(env['WINDOWSSDKDIR'])
+    # Ignore incomplete installations.
+    # e.g. VS supports ARM64, but the Windows SDK does not.
+    if not vc_lib_path or not vc_lib_um_path:
+      continue
+
+    windows_sdk_paths[name] = os.path.realpath(env['WINDOWSSDKDIR'])
 
     # The separator for INCLUDE here must match the one used in
     # _LoadToolchainEnv() above.
-    include = [include_prefix + p for p in env['INCLUDE'].split(';') if p]
-    include = ' '.join(['"' + i.replace('"', r'\"') + '"' for i in include])
-    include_flags = include
+    include = [p.replace('"', r'\"') for p in env['INCLUDE'].split(';') if p]
+
+    # Make include path relative to builddir when cwd and sdk in same drive.
+    try:
+      include = list(map(os.path.relpath, include))
+    except ValueError:
+      pass
+
+    lib = [p.replace('"', r'\"') for p in env['LIB'].split(';') if p]
+    # Make lib path relative to builddir when cwd and sdk in same drive.
+    try:
+      lib = list(map(os.path.relpath, lib))
+    except ValueError:
+      pass
+
+    def q(s):  # Quote s if it contains spaces or other weird characters.
+      return s if re.match(r'^[a-zA-Z0-9._/\\:-]*$', s) else '"' + s + '"'
+
+    include_I = ' '.join([q('/I' + i) for i in include])
+    include_imsvc = ' '.join([q('-imsvc' + i) for i in include])
+    libpath_flags = ' '.join([q('-libpath:' + i) for i in lib])
 
     env_block = _FormatAsEnvironmentBlock(env)
-    env_filename = 'environment_{}{}'.format(cpu, suffix)
+    env_filename = 'environment_{}'.format(name)
     with open(env_filename, 'wb') as f:
       f.write(env_block)
-    print(cpu + suffix + ' = {')
-    print(gn_helpers.ToGNString(dict(
-      vc_bin_dir=vc_bin_dir, vc_lib_path=vc_lib_path,
-      vc_lib_atlmfc_path=vc_lib_atlmfc_path,
-      vc_lib_um_path=vc_lib_um_path,
-      include_flags=include_flags, env_filename=env_filename)))
+    print(name + ' = {')
+
+    print('env_filename = ' + gn_helpers.ToGNString(env_filename))
+    assert vc_bin_dir
+    print('vc_bin_dir = ' + gn_helpers.ToGNString(vc_bin_dir))
+    assert include_I
+    print('include_flags_I = ' + gn_helpers.ToGNString(include_I))
+    assert include_imsvc
+    print('include_flags_imsvc = ' + gn_helpers.ToGNString(include_imsvc))
+    assert vc_lib_path
+    print('vc_lib_path = ' + gn_helpers.ToGNString(vc_lib_path))
+    # Possible atlmfc library path gets introduced in the future for store thus
+    # output result if a result exists.
+    if vc_lib_atlmfc_path != '':
+      print('vc_lib_atlmfc_path = ' + gn_helpers.ToGNString(vc_lib_atlmfc_path))
+    assert vc_lib_um_path
+    print('vc_lib_um_path = ' + gn_helpers.ToGNString(vc_lib_um_path))
+    print('paths = ' + gn_helpers.ToGNString(env['PATH']))
+    assert libpath_flags
+    print('libpath_flags = ' + gn_helpers.ToGNString(libpath_flags))
     print('}')
 
   if len(set(windows_sdk_paths.values())) != 1:

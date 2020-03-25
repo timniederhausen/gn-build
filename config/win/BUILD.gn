@@ -6,6 +6,7 @@ import("//build/config/compiler.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/win/settings.gni")
 import("//build/toolchain/toolchain.gni")
+import("//build/toolchain/clang.gni")
 
 assert(is_win)
 
@@ -56,6 +57,7 @@ config("compiler") {
     "/Gy",  # Enable function-level linking.
     "/FS",  # Preserve previous PDB behavior.
     "/bigobj",  # Some of our files are bigger than the regular limits.
+    "/utf-8",  # Assume UTF-8 by default to avoid code page dependencies.
   ]
 
   if (current_cpu == "x86") {
@@ -88,13 +90,41 @@ config("compiler") {
   }
 
   if (is_clang) {
+    # Don't look for includes in %INCLUDE%.
+    cflags += [ "/X" ]
+
+    # Tell clang which version of MSVC to emulate.
     cflags += [ "-fmsc-version=" + msc_ver ]
 
     if (current_cpu == "x86") {
       cflags += [ "-m32" ]
-    } else {
+    } else if (current_cpu == "x64") {
       cflags += [ "-m64" ]
+    } else if (current_cpu == "arm64") {
+      cflags += [ "--target=arm64-windows" ]
+    } else {
+      assert(false, "unknown current_cpu " + current_cpu)
     }
+
+    # Clang runtime libraries, such as the sanitizer runtimes, live here.
+    lib_dirs = [ "$clang_base_path/lib/clang/$win_clang_version/lib/windows" ]
+  }
+
+  if (use_lld && !use_thin_lto && is_clang) {
+    # /Brepro lets the compiler not write the mtime field in the .obj output.
+    # link.exe /incremental relies on this field to work correctly, but lld
+    # never looks at this timestamp, so it's safe to pass this flag with
+    # lld and get more deterministic compiler output in return.
+    # In LTO builds, the compiler doesn't write .obj files containing mtimes,
+    # so /Brepro is ignored there.
+    cflags += [ "/Brepro" ]
+  }
+
+  ldflags = []
+
+  if (use_lld) {
+    # Don't look for libpaths in %LIB%, similar to /X in cflags above.
+    ldflags += [ "/lldignoreenv" ]
   }
 
   # arflags apply only to static_libraries. The normal linker configs are only

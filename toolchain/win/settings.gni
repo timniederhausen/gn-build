@@ -36,12 +36,9 @@ assert(visual_studio_path == "" || visual_studio_version != "latest",
        "You must set visual_studio_version if you set visual_studio_path")
 
 if (is_clang) {
-  sys_include_prefix = "-imsvc"
   _clang_base_path_arg = clang_base_path
   _clang_msc_ver = "" + clang_msc_ver
 } else {
-  # MSVC doesn't have the concept of system headers.
-  sys_include_prefix = "/I"
   _clang_base_path_arg = ""
   _clang_msc_ver = ""
 }
@@ -65,7 +62,6 @@ if (cached_toolchain_data != "") {
                                  "setup_toolchain",
                                  visual_studio_version,
                                  visual_studio_path,
-                                 sys_include_prefix,
                                  windows_sdk_version,
 
                                  # Don't use clang_base_path directly, so we can
