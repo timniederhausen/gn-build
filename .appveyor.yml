@@ -3,7 +3,7 @@ clone_folder: c:\projects\gn-build\build
 shallow_clone: true
 
 environment:
-  GN_WIN_SHA1: e20768d93a6b4400de0d03bb8ceb46facdbe3883
+  GN_WIN_URL: https://github.com/timniederhausen/gn/releases/download/2020.03/gn-win-amd64.zip
 
   matrix:
     - GN_ARGS: "visual_studio_version=\\\"2013\\\""
@@ -29,11 +29,11 @@ matrix:
 install:
   # All external dependencies are installed in C:\projects\deps
   - mkdir C:\projects\deps
+  - set PATH=C:\projects\deps;%PATH%
 
   # Install the current GN version
-  - set GN_URL="https://storage.googleapis.com/chromium-gn/%GN_WIN_SHA1%"
-  - appveyor DownloadFile %GN_URL% -FileName C:\projects\deps\gn.exe
-  - set PATH=C:\projects\deps;%PATH%
+  - appveyor DownloadFile %GN_WIN_URL% -FileName C:\projects\deps\gn.zip
+  - 7z x C:\projects\deps\gn.zip -oC:\projects\deps > nul
   - gn --version
 
   # Install Ninja
