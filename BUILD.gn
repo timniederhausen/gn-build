@@ -51,7 +51,7 @@ group("hello_all") {
         ":hello(//build/toolchain/win:x86)",
       ]
     }
-  } else if (is_posix && !is_android && !is_linux) {
+  } else if (is_posix && !is_android && !is_linux && !is_mac) {
     if (is_clang) {
       deps = [
         ":hello(//build/toolchain/posix:clang_x64)",
