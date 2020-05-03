@@ -53,3 +53,4 @@ _mac_sdk_result = exec_script(script_name, sdk_info_args, "scope")
 xcode_version = _mac_sdk_result.xcode_version
 xcode_build = _mac_sdk_result.xcode_build
 machine_os_build = _mac_sdk_result.machine_os_build
+mac_sdk_build = _mac_sdk_result.sdk_build
