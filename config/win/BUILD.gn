@@ -57,7 +57,6 @@ config("compiler") {
     "/Gy",  # Enable function-level linking.
     "/FS",  # Preserve previous PDB behavior.
     "/bigobj",  # Some of our files are bigger than the regular limits.
-    "/utf-8",  # Assume UTF-8 by default to avoid code page dependencies.
   ]
 
   if (current_cpu == "x86") {
@@ -153,6 +152,12 @@ config("compiler") {
       ]
     }
   }
+}
+
+# Sets the default source file encoding to UTF-8.
+# Without this, the system code page is used.
+config("utf8") {
+  cflags = [ "/utf-8" ]
 }
 
 config("vs_code_analysis") {
