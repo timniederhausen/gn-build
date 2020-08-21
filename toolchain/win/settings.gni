@@ -87,8 +87,10 @@ msc_ver = toolchain_data.msc_ver
 # see: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
 msc_full_ver = toolchain_data.msc_full_ver
 
-if (is_clang) {
+if (defined(toolchain_data.clang_version)) {
   win_clang_version = toolchain_data.clang_version
+} else {
+  win_clang_version = 0
 }
 
 # current_toolchain_data: Settings specific to current_os/current_cpu

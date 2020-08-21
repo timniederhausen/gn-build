@@ -153,6 +153,16 @@ template("msvc_toolchain") {
       sys_lib_flags = ""
     }
 
+    if (toolchain_args.is_clang && win_clang_version >= 110000) {
+      # This flag omits system includes from /showIncludes output, to reduce the
+      # amount of data to parse and store in .ninja_deps. We do this on non-Windows too,
+      # and already make sure rebuilds after win sdk / libc++ / clang header updates happen via
+      # changing commandline flags.
+      show_includes = "/showIncludes:user"
+    } else {
+      show_includes = "/showIncludes"
+    }
+
     tool("cc") {
       precompiled_header_type = "msvc"
       pdbname = "{{target_out_dir}}/{{label_name}}_c.pdb"
@@ -166,7 +176,7 @@ template("msvc_toolchain") {
       # Label names may have spaces in them so the pdbname must be quoted. The
       # source and output don't need to be quoted because GN knows they're a
       # full file name and will quote automatically when necessary.
-      command = "$env_wrapper$cl /nologo /showIncludes /FC $sys_include_flags{{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} /c {{source}} /Fo{{output}} /Fd\"$pdbname\""
+      command = "$env_wrapper$cl /nologo $show_includes /FC $sys_include_flags{{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} /c {{source}} /Fo{{output}} /Fd\"$pdbname\""
     }
 
     tool("cxx") {
@@ -182,7 +192,7 @@ template("msvc_toolchain") {
       ]
 
       # See comment in CC tool about quoting.
-      command = "$env_wrapper$cl /nologo /showIncludes /FC $sys_include_flags{{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} /c {{source}} /Fo{{output}} /Fd\"$pdbname\""
+      command = "$env_wrapper$cl /nologo $show_includes /FC $sys_include_flags{{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} /c {{source}} /Fo{{output}} /Fd\"$pdbname\""
     }
 
     tool("rc") {
