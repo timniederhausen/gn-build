@@ -279,8 +279,16 @@ def SetupToolchain(version_as_year, vs_path, sdk_version=None,
   # vcvarsall.bat for VS 2017 fails if run after running vcvarsall.bat from
   # VS 2013 or VS 2015. Fix this by clearing the vsinstalldir environment
   # variable.
+  # Since vcvarsall.bat appends to the INCLUDE, LIB, and LIBPATH
+  # environment variables we need to clear those to avoid getting double
+  # entries when vcvarsall.bat has been run before gn gen. vcvarsall.bat
+  # also adds to PATH, but there is no clean way of clearing that and it
+  # doesn't seem to cause problems.
   if 'VSINSTALLDIR' in os.environ:
     del os.environ['VSINSTALLDIR']
+    del os.environ['INCLUDE']
+    del os.environ['LIB']
+    del os.environ['LIBPATH']
 
   if version_as_year == 'latest':
     version_as_year, vs_path = FindLatestVisualStudio()
