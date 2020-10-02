@@ -157,7 +157,9 @@ config("compiler") {
 # Sets the default source file encoding to UTF-8.
 # Without this, the system code page is used.
 config("utf8") {
-  cflags = [ "/utf-8" ]
+  if (msc_full_ver >= 190000000) {
+    cflags = [ "/utf-8" ]
+  }
 }
 
 config("vs_code_analysis") {
