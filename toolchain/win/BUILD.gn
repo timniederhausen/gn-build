@@ -153,12 +153,21 @@ template("msvc_toolchain") {
       sys_lib_flags = ""
     }
 
-    if (toolchain_args.is_clang && win_clang_version >= 110000) {
-      # This flag omits system includes from /showIncludes output, to reduce the
-      # amount of data to parse and store in .ninja_deps. We do this on non-Windows too,
-      # and already make sure rebuilds after win sdk / libc++ / clang header updates happen via
-      # changing commandline flags.
-      show_includes = "/showIncludes:user"
+    if (toolchain_uses_clang) {
+      # Write header deps to a file instead of writing to stdout. This ensures
+      # compatibility with sccache and potentially other tools that add the
+      # `/E` (preprocess to stdout) flag, which our version of clang-cl
+      # doesn't properly support in conjunction with `/showIncludes`.
+      # See https://reviews.llvm.org/D46394
+      # and https://github.com/mozilla/sccache/issues/246
+
+      # We can't pass `-MMD -MF` (as it's done in gcc_toolchain.gni) to
+      # clang-cl, not even when prefixed with `-Xclang`. The underlying cc1
+      # binary does know how to generate depfiles but it requires somewhat
+      # different flags.
+      # See https://bugzilla.mozilla.org/show_bug.cgi?id=1340588
+      # and https://hg.mozilla.org/mozilla-central/rev/30dc6c484d42
+      show_includes = "-Xclang -dependency-file -Xclang \"{{output}}.d\" -Xclang -MT -Xclang {{source}} -Xclang -MP -Xclang -MG"
     } else {
       show_includes = "/showIncludes"
     }
@@ -167,11 +176,17 @@ template("msvc_toolchain") {
       precompiled_header_type = "msvc"
       pdbname = "{{target_out_dir}}/{{label_name}}_c.pdb"
 
-      depsformat = "msvc"
       description = "CC {{output}}"
       outputs = [
         "$object_path.obj",
       ]
+
+      if (toolchain_uses_clang) {
+        depsformat = "gcc"
+        depfile = "{{output}}.d"
+      } else {
+        depsformat = "msvc"
+      }
 
       # Label names may have spaces in them so the pdbname must be quoted. The
       # source and output don't need to be quoted because GN knows they're a
@@ -185,11 +200,17 @@ template("msvc_toolchain") {
       # The PDB name needs to be different between C and C++ compiled files.
       pdbname = "{{target_out_dir}}/{{label_name}}_cc.pdb"
 
-      depsformat = "msvc"
       description = "CXX {{output}}"
       outputs = [
         "$object_path.obj",
       ]
+
+      if (toolchain_uses_clang) {
+        depsformat = "gcc"
+        depfile = "{{output}}.d"
+      } else {
+        depsformat = "msvc"
+      }
 
       # See comment in CC tool about quoting.
       command = "$env_wrapper$cl /nologo $show_includes /FC $sys_include_flags{{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} /c {{source}} /Fo{{output}} /Fd\"$pdbname\""
