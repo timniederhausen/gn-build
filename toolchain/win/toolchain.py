@@ -393,8 +393,11 @@ def SetupToolchain(version_as_year, vs_path, sdk_version=None,
     print('libpath_flags = ' + gn_helpers.ToGNString(libpath_flags))
     print('}')
 
+  if not windows_sdk_paths:
+    raise Exception("No usable Windows SDK found")
+
   if len(set(windows_sdk_paths.values())) != 1:
-    raise Exception("WINDOWSSDKDIR is different for x86/x64")
+    raise Exception("Different WINDOWSSDKDIR values for different CPUs are unsupported")
 
   print('visual_studio_version = ' + gn_helpers.ToGNString(version_as_year))
   print('visual_studio_path = ' + gn_helpers.ToGNString(vs_path))
