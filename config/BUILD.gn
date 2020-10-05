@@ -262,6 +262,12 @@ config("compiler") {
 
   if (is_posix && use_lld) {
     ldflags += [ "-fuse-ld=lld" ]
+    if (current_cpu == "arm64") {
+      # Reduce the page size from 65536 in order to reduce binary size slightly
+      # by shrinking the alignment gap between segments. This also causes all
+      # segments to be mapped adjacently, which breakpad relies on.
+      ldflags += [ "-Wl,-z,max-page-size=4096" ]
+    }
   } else if (use_gold) {
     ldflags += [
       # Newer gccs and clangs support -fuse-ld, use the flag to force gold
