@@ -214,14 +214,18 @@ config("compiler") {
 
   # Linux/Android common flags setup.
   # ---------------------------------
-  if (is_linux || is_android) {
-    cflags += [
-      "-fPIC",
-      "-pipe",  # Use pipes for communicating between sub-processes. Faster.
-    ]
+  if (is_linux || is_android || is_freebsd) {
+    asmflags += [ "-fPIC" ]
+    cflags += [ "-fPIC" ]
+    ldflags += [ "-fPIC" ]
+
+    if (!is_clang) {
+      # Use pipes for communicating between sub-processes. Faster.
+      # (This flag doesn't do anything with Clang.)
+      cflags += [ "-pipe" ]
+    }
 
     ldflags += [
-      "-fPIC",
       "-Wl,-z,noexecstack",
       "-Wl,-z,now",
       "-Wl,-z,relro",
