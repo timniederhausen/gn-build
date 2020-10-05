@@ -276,19 +276,16 @@ config("compiler") {
       "-fuse-ld=gold",
     ]
 
-    if (is_android) {
-      # Use -mstackrealign due to a bug on ia32 Jelly Bean.
-      # See crbug.com/521527
-      if (current_cpu == "x86") {
-        cflags += [ "-mstackrealign" ]
+    ldflags += [ "-fuse-ld=gold" ]
+    if (!is_android) {
+      # On Android, this isn't needed.  gcc in the NDK knows to look next to
+      # it with -fuse-ld=gold, and clang gets a --gcc-toolchain flag passed
+      # above.
+      if (gold_path != "") {
+        ldflags += [ "-B$gold_path" ]
       }
-    } else {
-      ldflags += [
-        # On Android, this isn't needed.  gcc in the NDK knows to look next to
-        # it with -fuse-ld=gold, and clang gets a --gcc-toolchain flag passed
-        # above.
-        "-B$gold_path",
 
+      ldflags += [
         # Experimentation found that using four linking threads
         # saved ~20% of link time.
         # https://groups.google.com/a/chromium.org/group/chromium-dev/browse_thread/thread/281527606915bb36
