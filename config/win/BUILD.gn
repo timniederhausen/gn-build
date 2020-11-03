@@ -62,7 +62,9 @@ config("compiler") {
   if (current_cpu == "x86") {
     # TODO: Move this somewhere else (compiler_codegen?)
     # Preserve previous /arch behaviour (since 12.0 it defaults to /arch:SSE2)
-    cflags += [ "/arch:IA32" ]
+    # The options would cause link error, in `LLVM+Win32`: 
+    # unresolved external symbol ___atomic_compare_exchange_8
+    # cflags += [ "/arch:IA32" ]
   }
 
   # Force C/C++ mode for the given GN detected file type. This is necessary
