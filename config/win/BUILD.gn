@@ -59,12 +59,6 @@ config("compiler") {
     "/bigobj",  # Some of our files are bigger than the regular limits.
   ]
 
-  if (current_cpu == "x86") {
-    # TODO: Move this somewhere else (compiler_codegen?)
-    # Preserve previous /arch behaviour (since 12.0 it defaults to /arch:SSE2)
-    cflags += [ "/arch:IA32" ]
-  }
-
   # Force C/C++ mode for the given GN detected file type. This is necessary
   # for precompiled headers where the same source file is compiled in both
   # modes.
