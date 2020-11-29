@@ -328,7 +328,7 @@ default_compiler_configs = [
   "//build/config:default_optimization",
   "//build/config:default_stack_frames",
   "//build/config:default_symbols",
-  "//build/config:c++11",
+  "//build/config:c++17",
   "//build/config:rtti",
   "//build/config:exceptions",
   "//build/config:runtime_library",
