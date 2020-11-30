@@ -18,22 +18,22 @@ matrix:
   include:
     - compiler: gcc
       os: linux
-      env: GN_ARGS='gcc_cc="gcc-4.9" gcc_cxx="g++-4.9" is_clang=false'
+      env: GN_ARGS='gcc_cc="gcc-6" gcc_cxx="g++-6" is_clang=false'
       addons: &gcc_addons
         apt:
           sources:
             - *sources
           packages:
-            - g++-4.9
+            - g++-6
 
     - compiler: gcc
       os: linux
-      env: GN_ARGS='gcc_cc="gcc-4.9" gcc_cxx="g++-4.9" is_clang=false is_debug=false'
+      env: GN_ARGS='gcc_cc="gcc-6" gcc_cxx="g++-6" is_clang=false is_debug=false'
       addons: *gcc_addons
 
     - compiler: gcc
       os: linux
-      env: GN_ARGS='gcc_cc="gcc-4.9" gcc_cxx="g++-4.9" is_clang=false is_official_build=true'
+      env: GN_ARGS='gcc_cc="gcc-6" gcc_cxx="g++-6" is_clang=false is_official_build=true'
       addons: *gcc_addons
 
     - compiler: clang
