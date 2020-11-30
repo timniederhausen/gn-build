@@ -76,33 +76,33 @@ declare_args() {
   # Note: Only honored on POSIX systems.
   enable_stack_protection = true
 
-  # Optional string containing extra assembler arguments.
+  # Optional list containing extra assembler arguments.
   # Like 'asmflags' this value is passed to all tools that take
   # an .asm or .S input.
   extra_asmflags = ""
 
-  # Optional string containing extra compiler arguments.
+  # Optional list containing extra compiler arguments.
   # Like 'cflags' this value is passed to the C, C++, Objective C, and
   # Objective C++ compilers.
   extra_cflags = ""
 
-  # Optional string containing extra compiler arguments.
+  # Optional list containing extra compiler arguments.
   # Like 'cflags_c' this value is only passed to the C compiler.
   extra_cflags_c = ""
 
-  # Optional string containing extra compiler arguments.
+  # Optional list containing extra compiler arguments.
   # Like 'cflags_cc' this value is only passed to the C++ compiler.
   extra_cflags_cc = ""
 
-  # Optional string containing extra compiler arguments.
+  # Optional list containing extra compiler arguments.
   # Like 'cflags_objc' this value is only passed to the Objective C compiler.
   extra_cflags_objc = ""
 
-  # Optional string containing extra compiler arguments.
+  # Optional list containing extra compiler arguments.
   # Like 'cflags_objcc' this value is only passed to the Objective C++ compiler.
   extra_cflags_objcc = ""
 
-  # Optional string containing extra linker arguments.
+  # Optional list containing extra linker arguments.
   extra_ldflags = ""
 }
 
@@ -377,27 +377,30 @@ config("compiler") {
   }
 }
 
+# This config allows the user to directly specify compiler flags.
+# Mostly intended for special environments that don't warrant their
+# own config in //build.
 config("extra_flags") {
   if (extra_asmflags != "") {
-    asmflags = [ extra_asmflags ]
+    asmflags = extra_asmflags
   }
   if (extra_cflags != "") {
-    cflags = [ extra_cflags ]
+    cflags = extra_cflags
   }
   if (extra_cflags_c != "") {
-    cflags_c = [ extra_cflags_c ]
+    cflags_c = extra_cflags_c
   }
   if (extra_cflags_cc != "") {
-    cflags_cc = [ extra_cflags_cc ]
+    cflags_cc = extra_cflags_cc
   }
   if (extra_cflags_objc != "") {
-    cflags_objc = [ extra_cflags_objc ]
+    cflags_objc = extra_cflags_objc
   }
   if (extra_cflags_objcc != "") {
-    cflags_objcc = [ extra_cflags_objcc ]
+    cflags_objcc = extra_cflags_objcc
   }
   if (extra_ldflags != "") {
-    ldflags = [ extra_ldflags ]
+    ldflags = extra_ldflags
   }
 }
 
