@@ -967,8 +967,16 @@ if (is_win) {
       # Mac dead code stripping requires symbols.
       common_optimize_on_ldflags += [ "-Wl,-dead_strip" ]
     }
-  } else {
+
+    if (is_official_build) {
+      common_optimize_on_ldflags += [
+        "-Wl,-no_data_in_code_info",
+        "-Wl,-no_function_starts",
+      ]
+    }
+  } else if (current_os != "aix") {
     # Non-Mac Posix flags.
+    # Aix does not support these.
 
     common_optimize_on_cflags += [
       # Don't emit the GCC version ident directives, they just end up in the
@@ -984,7 +992,8 @@ if (is_win) {
     common_optimize_on_ldflags += [
       # Specifically tell the linker to perform optimizations.
       # See http://lwn.net/Articles/192624/ .
-      "-Wl,-O1",
+      # -O2 enables string tail merge optimization in gold and lld.
+      "-Wl,-O2",
       "-Wl,--gc-sections",
     ]
   }
@@ -994,6 +1003,7 @@ if (is_win) {
 config("optimize") {
   if (is_win) {
     # Favor size over speed, /O1 must be before the common flags.
+    # /O1 implies /Os and /GF.
     cflags = [ "/O1" ] + common_optimize_on_cflags + [ "/Oi" ]
   } else {
     cflags = [ "-O2" ] + common_optimize_on_cflags
@@ -1007,7 +1017,14 @@ config("no_optimize") {
     cflags = [
       "/Od",  # Disable optimization.
       "/Ob0",  # Disable all inlining (on by default).
+      "/GF",  # Enable string pooling (off by default).
     ]
+
+    if (target_cpu == "arm64") {
+      # Disable omitting frame pointers for no_optimize build because stack
+      # traces on Windows ARM64 rely on it.
+      cflags += [ "/Oy-" ]
+    }
   } else {
     cflags = [ "-O0" ]
     ldflags = []
