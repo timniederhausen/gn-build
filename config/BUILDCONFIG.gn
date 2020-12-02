@@ -380,6 +380,8 @@ if (is_win) {
   ]
 } else if (is_mac || is_ios) {
   _linker_configs = [ "//build/config/mac:strip_all" ]
+} else if (is_android || is_linux || is_freebsd) {
+  _linker_configs = [ "//build/config/posix:no_undefined" ]
 } else {
   _linker_configs = []
 }

@@ -1,3 +1,4 @@
+import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/sysroot.gni")
 
 assert(is_posix)
@@ -8,6 +9,7 @@ assert(is_posix)
 config("compiler") {
   cflags = []
   ldflags = []
+
   if (is_freebsd && is_clang) {
     # GCC seems to include /usr/local/include in its default include dirs.
     cflags += [ "-isystem/usr/local/include" ]
@@ -49,5 +51,15 @@ config("executable_ldconfig") {
 
   if (current_cpu == "mipsel") {
     ldflags += [ "-pie" ]
+  }
+}
+
+# This config ensures that targets do not refer to symbols unresolved at
+# compile time.
+# Disable this for DSOs that depend on symbols of the executables
+# that load them (e.g. Apache modules)
+config("no_undefined") {
+  if (!using_sanitizer && !use_cfi_diag) {
+    ldflags = [ "-Wl,-z,defs" ]
   }
 }

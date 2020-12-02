@@ -230,15 +230,12 @@ config("compiler") {
       "-Wl,-z,now",
       "-Wl,-z,relro",
     ]
-    if (!using_sanitizer) {
-      if (!use_cfi_diag) {
-        ldflags += [ "-Wl,-z,defs" ]
-      }
 
+    if (!using_sanitizer) {
       # Functions interposed by the sanitizers can make ld think
       # that some libraries aren't needed when they actually are,
       # http://crbug.com/234010. As workaround, disable --as-needed.
-      if (!is_android) {
+      if (is_clang && !is_android && clang_version < 70000) {
         # TODO(pcc): Fix linker bug which requires us to link pthread
         # unconditionally here (crbug.com/623236).
         ldflags += [
@@ -276,7 +273,6 @@ config("compiler") {
       "-fuse-ld=gold",
     ]
 
-    ldflags += [ "-fuse-ld=gold" ]
     if (!is_android) {
       # On Android, this isn't needed.  gcc in the NDK knows to look next to
       # it with -fuse-ld=gold, and clang gets a --gcc-toolchain flag passed
