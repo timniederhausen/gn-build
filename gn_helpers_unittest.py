@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import mock
 import sys
 import textwrap
 import unittest
@@ -280,9 +279,14 @@ class UnitTest(unittest.TestCase):
         some_arg2 = "val2"
     """))
     fake_import = 'some_imported_arg = "imported_val"'
-    builtin_var = '__builtin__' if sys.version_info.major < 3 else 'builtins'
+    if sys.version_info.major < 3:
+      from mock import patch, mock_open
+      builtin_var = '__builtin__'
+    else:
+      from unittest.mock import patch, mock_open
+      builtin_var = 'builtins'
     open_fun = '{}.open'.format(builtin_var)
-    with mock.patch(open_fun, mock.mock_open(read_data=fake_import)):
+    with patch(open_fun, mock_open(read_data=fake_import)):
       parser.ReplaceImports()
     self.assertEqual(
         parser.input,

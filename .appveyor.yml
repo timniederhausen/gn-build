@@ -55,5 +55,5 @@ build_script:
   - ninja -C out
 
 test_script:
-  - python build\gn_helpers_unittest.py
+  - py -3 build\gn_helpers_unittest.py
   - out\hello

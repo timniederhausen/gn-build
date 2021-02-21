@@ -78,7 +78,7 @@ install:
 
 script:
   # Run gn_helpers unittests first - this should fail if we have an unsupported Python version
-  - python gn_helpers_unittest.py
+  - python3 gn_helpers_unittest.py
 
   # Setup test project for our //build
   - git clone --branch=testsrc --depth=1 https://github.com/timniederhausen/gn-build.git testsrc
