@@ -142,6 +142,29 @@ def _FormatAsEnvironmentBlock(envvar_dict):
   return block
 
 
+def GetEnv(arch):
+  """Gets the saved environment from a file for a given architecture."""
+  # The environment is saved as an "environment block" (see CreateProcess
+  # and msvs_emulation for details). We convert to a dict here.
+  # Drop last 2 NULs, one for list terminator, one for trailing vs. separator.
+  pairs = open(arch).read()[:-2].split('\0')
+  kvs = [item.split('=', 1) for item in pairs]
+  return dict(kvs)
+
+
+def LoadEnvFromCache(name):
+  if os.path.exists(name):
+    return GetEnv(name)
+
+  return None
+
+
+def SaveEnv(name, env):
+  env_block = _FormatAsEnvironmentBlock(env)
+  with open(name, 'wb') as f:
+    f.write(env_block)
+
+
 def _ParseClVersion(out):
   for line in out.splitlines():
     m = re.search(r' ([0-9.]+)', line)
@@ -298,15 +321,22 @@ def SetupToolchain(version_as_year, vs_path, sdk_version=None,
   # TODO(tim): We now launch all processes at once, but this still takes too long
   processes = {}
   for (cpu, is_uwp) in itertools.product(cpus, (False, True)):
-    suffix = '_uwp' if is_uwp else ''
-    processes[cpu + suffix] = _Spawn(_BuildToolchainSetupCommand(vs_path, cpu, sdk_version, is_uwp))
+    name = cpu + ('_uwp' if is_uwp else '')
+    env_filename = 'environment_{}'.format(name)
+    if not os.path.exists(env_filename):
+      processes[name] = _Spawn(_BuildToolchainSetupCommand(vs_path, cpu, sdk_version, is_uwp))
 
   windows_sdk_paths = {}
   envs = {}
   for (cpu, is_uwp) in itertools.product(cpus, (False, True)):
     name = cpu + ('_uwp' if is_uwp else '')
-    # Extract environment variables for subprocesses.
-    env = _ExtractImportantEnvironment(_ProcessSpawnResult(processes[name]))
+    env_filename = 'environment_{}'.format(name)
+    # Load environment variables.
+    env = LoadEnvFromCache(env_filename)
+    if env is None:
+      # Extract environment variables for subprocesses.
+      env = _ExtractImportantEnvironment(_ProcessSpawnResult(processes[name]))
+      SaveEnv(env_filename, env)
     envs[name] = env
 
     vc_bin_dir = ''
@@ -367,10 +397,6 @@ def SetupToolchain(version_as_year, vs_path, sdk_version=None,
     include_imsvc = ' '.join([q('-imsvc' + i) for i in include])
     libpath_flags = ' '.join([q('-libpath:' + i) for i in lib])
 
-    env_block = _FormatAsEnvironmentBlock(env)
-    env_filename = 'environment_{}'.format(name)
-    with open(env_filename, 'wb') as f:
-      f.write(env_block)
     print(name + ' = {')
 
     print('env_filename = ' + gn_helpers.ToGNString(env_filename))
