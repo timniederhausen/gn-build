@@ -3,19 +3,13 @@ import os
 import re
 import subprocess
 import sys
+from toolchain import GetEnv
+
 
 # A regex matching an argument corresponding to the output filename passed to
 # link.exe.
 _LINK_EXE_OUT_ARG = re.compile('/OUT:(?P<out>.+)$', re.IGNORECASE)
 
-def GetEnv(arch):
-  """Gets the saved environment from a file for a given architecture."""
-  # The environment is saved as an "environment block" (see CreateProcess
-  # and msvs_emulation for details). We convert to a dict here.
-  # Drop last 2 NULs, one for list terminator, one for trailing vs. separator.
-  pairs = open(arch).read()[:-2].split('\0')
-  kvs = [item.split('=', 1) for item in pairs]
-  return dict(kvs)
 
 def UseSeparateMspdbsrv(env, args):
   """Allows to use a unique instance of mspdbsrv.exe per linker instead of a

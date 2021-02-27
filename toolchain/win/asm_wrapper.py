@@ -1,15 +1,8 @@
 #!/usr/bin/env python
 import subprocess
 import sys
+from toolchain import GetEnv
 
-def GetEnv(arch):
-  """Gets the saved environment from a file for a given architecture."""
-  # The environment is saved as an "environment block" (see CreateProcess
-  # and msvs_emulation for details). We convert to a dict here.
-  # Drop last 2 NULs, one for list terminator, one for trailing vs. separator.
-  pairs = open(arch).read()[:-2].split('\0')
-  kvs = [item.split('=', 1) for item in pairs]
-  return dict(kvs)
 
 def main(arch, *args):
   """Filter logo banner from invocations of asm.exe."""

@@ -2,17 +2,9 @@
 import subprocess
 import sys
 import os
+from toolchain import GetEnv
 
 msvc_deps_prefix = 'Note: including file: '
-
-def get_env(arch):
-  """Gets the saved environment from a file for a given architecture."""
-  # The environment is saved as an "environment block" (see CreateProcess
-  # and msvs_emulation for details). We convert to a dict here.
-  # Drop last 2 NULs, one for list terminator, one for trailing vs. separator.
-  pairs = open(arch).read()[:-2].split('\0')
-  kvs = [item.split('=', 1) for item in pairs]
-  return dict(kvs)
 
 def call(*popenargs, **kwargs):
   process = subprocess.Popen(stdout=subprocess.PIPE, universal_newlines=True,
@@ -23,7 +15,7 @@ def call(*popenargs, **kwargs):
 def main(arch, source, output, rc_name, *args):
   """Output header dependencies and filter logo banner from invocations
   of rc.exe. Older versions of RC don't support the /nologo flag."""
-  env = get_env(arch)
+  env = GetEnv(arch)
   args = list(args)
 
   output_dir = os.path.split(output)[0]
