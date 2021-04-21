@@ -16,7 +16,7 @@ def ListIdentities():
     '-v',
     '-p',
     'codesigning',
-  ])
+  ], text=True)
 
 
 def FindValidIdentity():

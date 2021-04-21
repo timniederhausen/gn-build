@@ -23,7 +23,7 @@ def FormatVersion(version):
 
 def FillXcodeVersion(settings):
   """Fills the Xcode version and build number into |settings|."""
-  lines = subprocess.check_output(['xcodebuild', '-version']).splitlines()
+  lines = subprocess.check_output(['xcodebuild', '-version'], text=True).splitlines()
   settings['xcode_version'] = FormatVersion(lines[0].split()[-1])
   settings['xcode_build'] = lines[-1].split()[-1]
 
@@ -31,22 +31,22 @@ def FillXcodeVersion(settings):
 def FillMachineOSBuild(settings):
   """Fills OS build number into |settings|."""
   settings['machine_os_build'] = subprocess.check_output(
-      ['sw_vers', '-buildVersion']).strip()
+      ['sw_vers', '-buildVersion'], text=True).strip()
 
 
 def FillSDKPathAndVersion(settings, platform, xcode_version):
   """Fills the SDK path and version for |platform| into |settings|."""
   settings['sdk_path'] = subprocess.check_output([
-      'xcrun', '-sdk', platform, '--show-sdk-path']).strip()
+      'xcrun', '-sdk', platform, '--show-sdk-path'], text=True).strip()
   settings['sdk_version'] = subprocess.check_output([
-      'xcrun', '-sdk', platform, '--show-sdk-version']).strip()
+      'xcrun', '-sdk', platform, '--show-sdk-version'], text=True).strip()
   settings['sdk_platform_path'] = subprocess.check_output([
-      'xcrun', '-sdk', platform, '--show-sdk-platform-path']).strip()
+      'xcrun', '-sdk', platform, '--show-sdk-platform-path'], text=True).strip()
   # TODO: unconditionally use --show-sdk-build-version once Xcode 7.2 or
   # higher is required to build Chrome for iOS or OS X.
   if xcode_version >= '0720':
     settings['sdk_build'] = subprocess.check_output([
-        'xcrun', '-sdk', platform, '--show-sdk-build-version']).strip()
+        'xcrun', '-sdk', platform, '--show-sdk-build-version'], text=True).strip()
   else:
     settings['sdk_build'] = settings['sdk_version']
 
