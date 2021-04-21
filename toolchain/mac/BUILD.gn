@@ -207,7 +207,7 @@ template("mac_toolchain") {
     tool("alink") {
       script =
           rebase_path("//build/toolchain/mac/filter_libtool.py", root_build_dir)
-      command = "$env_wrapper rm -f {{output}} && TOOL_VERSION=${tool_versions.filter_libtool} python $script libtool -static {{arflags}} -o {{output}} {{inputs}}"
+      command = "$env_wrapper rm -f {{output}} && TOOL_VERSION=${tool_versions.filter_libtool} python3 $script libtool -static {{arflags}} -o {{output}} {{inputs}}"
       description = "LIBTOOL-STATIC {{output}}"
       outputs = [
         "{{output_dir}}/{{target_output_name}}{{output_extension}}",
@@ -390,7 +390,7 @@ template("mac_toolchain") {
       }
       command = "$env_wrapper rm -f {{output}} && " +
                 "TOOL_VERSION=${tool_versions.compile_xcassets} " +
-                "python $_tool -p $_sdk_name -t $_min_deployment_target " +
+                "python3 $_tool -p $_sdk_name -t $_min_deployment_target " +
                 "-T {{bundle_product_type}} -o {{output}} {{inputs}}"
 
       description = "COMPILE_XCASSETS {{output}}"

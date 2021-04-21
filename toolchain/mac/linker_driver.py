@@ -52,7 +52,7 @@ def Main(args):
   if len(args) < 2:
     raise RuntimeError("Usage: linker_driver.py [linker-invocation]")
 
-  for i in xrange(len(args)):
+  for i in range(len(args)):
     if args[i] != '--developer_dir':
       continue
     os.environ['DEVELOPER_DIR'] = args[i + 1]

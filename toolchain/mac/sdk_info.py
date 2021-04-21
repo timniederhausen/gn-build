@@ -70,4 +70,4 @@ if __name__ == '__main__':
   FillSDKPathAndVersion(settings, unknownargs[0], settings['xcode_version'])
 
   for key in sorted(settings):
-    print '%s="%s"' % (key, settings[key])
+    print('%s="%s"' % (key, settings[key]))
