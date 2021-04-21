@@ -45,7 +45,9 @@ config("compiler") {
   # This is here so that all files get recompiled after an Xcode update.
   # (defines are passed via the command line, and build system rebuild things
   # when their commandline changes). Nothing should ever read this define.
-  defines = [ "CR_XCODE_VERSION=$xcode_version" ]
+  if (mac_use_sdk) {
+    defines = [ "CR_XCODE_VERSION=$xcode_version" ]
+  }
 
   asmflags = common_mac_flags
   cflags = common_mac_flags
@@ -78,22 +80,24 @@ config("compiler") {
 # that is Mac-only. Please see that target for advice on what should go in
 # :runtime_library vs. :compiler.
 config("runtime_library") {
-  common_flags = [
-    "-isysroot",
-    sysroot,
-    "-mmacosx-version-min=$mac_deployment_target",
-  ]
+  if (mac_use_sdk) {
+    common_flags = [
+      "-isysroot",
+      sysroot,
+      "-mmacosx-version-min=$mac_deployment_target",
+    ]
 
-  asmflags = common_flags
-  cflags = common_flags
-  ldflags = common_flags
+    asmflags = common_flags
+    cflags = common_flags
+    ldflags = common_flags
 
-  if (is_mac) {
-    # Prevent Mac OS X AssertMacros.h from defining macros that collide
-    # with common names, like 'check', 'require', and 'verify'.
-    # (Included by system header. Also exists on iOS but not included.)
-    # http://opensource.apple.com/source/CarbonHeaders/CarbonHeaders-18.1/AssertMacros.h
-    defines = [ "__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORE=0" ]
+    if (is_mac) {
+      # Prevent Mac OS X AssertMacros.h from defining macros that collide
+      # with common names, like 'check', 'require', and 'verify'.
+      # (Included by system header. Also exists on iOS but not included.)
+      # http://opensource.apple.com/source/CarbonHeaders/CarbonHeaders-18.1/AssertMacros.h
+      defines = [ "__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORE=0" ]
+    }
   }
 }
 
@@ -120,5 +124,21 @@ config("strip_all") {
   # are passed to the linker_driver.py script directly during the lipo call.
   if (enable_stripping && !is_ios) {
     ldflags = [ "-Wcrl,strip,-x,-S" ]
+  }
+}
+
+# This is included by reference in the //build/config/default_libs config.
+config("default_libs") {
+  if (mac_use_sdk) {
+    libs = [
+      "AppKit.framework",
+      "ApplicationServices.framework",
+      "Carbon.framework",
+      "CoreFoundation.framework",
+      "Foundation.framework",
+      "IOKit.framework",
+      "OpenGL.framework",
+      "Security.framework",
+    ]
   }
 }
