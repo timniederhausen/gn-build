@@ -1340,16 +1340,7 @@ config("default_libs") {
       "m",
     ]
   } else if (is_mac) {
-    libs = [
-      "AppKit.framework",
-      "ApplicationServices.framework",
-      "Carbon.framework",
-      "CoreFoundation.framework",
-      "Foundation.framework",
-      "IOKit.framework",
-      "OpenGL.framework",
-      "Security.framework",
-    ]
+    configs = ["//build/config/mac:default_libs"]
   } else if (is_linux) {
     libs = [
       "dl",
