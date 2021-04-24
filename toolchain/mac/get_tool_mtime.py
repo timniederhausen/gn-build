@@ -14,4 +14,4 @@ import sys
 if __name__ == '__main__':
   for f in sys.argv[1:]:
     variable = os.path.splitext(os.path.basename(f))[0]
-    print '%s = %d' % (variable, os.path.getmtime(f))
+    print('%s = %d' % (variable, os.path.getmtime(f)))

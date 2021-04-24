@@ -16,7 +16,7 @@ def ListIdentities():
     '-v',
     '-p',
     'codesigning',
-  ])
+  ], text=True)
 
 
 def FindValidIdentity():
@@ -40,4 +40,4 @@ if __name__ == '__main__':
   if args.developer_dir:
     os.environ['DEVELOPER_DIR'] = args.developer_dir
 
-  print FindValidIdentity()
+  print(FindValidIdentity())

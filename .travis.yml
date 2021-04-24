@@ -85,6 +85,7 @@ script:
   - mkdir testsrc/build
   - mv config testsrc/build/
   - mv toolchain testsrc/build/
+  - echo script_executable = \"python3\" >> testsrc/.gn
 
   # Try to build the test project
   - ./gn gen out --args="$GN_ARGS" --root=testsrc
