@@ -1,0 +1,120 @@
+name: POSIX
+
+on:
+  pull_request:
+    branches:
+      - master
+      - develop
+      - feature/**
+  push:
+    branches:
+      - master
+      - develop
+      - feature/**
+  workflow_dispatch:
+  release:
+    types: published
+
+env:
+  NINJA_BASE_URL: https://github.com/ninja-build/ninja/releases/download/
+  GN_BASE_URL: https://github.com/timniederhausen/gn/releases/download/2020.09/
+
+jobs:
+  posix:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - slug: linux-gcc-i386
+            gen_args: 'gcc_cc="gcc-10" gcc_cxx="g++-10" target_cpu="x86" is_clang=false'
+            os: ubuntu-20.04
+            install: "g++-10-multilib"
+            ninja_release_name: v1.7.2/ninja-linux.zip
+            gn_release_name: gn-linux-amd64.tar.gz
+
+          - slug: linux-gcc-amd64
+            gen_args: 'gcc_cc="gcc-10" gcc_cxx="g++-10" target_cpu="x64" is_clang=false'
+            os: ubuntu-20.04
+            install: "g++-10"
+            ninja_release_name: v1.7.2/ninja-linux.zip
+            gn_release_name: gn-linux-amd64.tar.gz
+
+          - slug: linux-clang-i386
+            gen_args: 'clang_cc="clang-10" clang_cxx="clang++-10" target_cpu="x86" is_clang=true'
+            os: ubuntu-20.04
+            install: "clang-10 g++-multilib"
+            ninja_release_name: v1.7.2/ninja-linux.zip
+            gn_release_name: gn-linux-amd64.tar.gz
+
+          - slug: linux-clang-amd64
+            gen_args: 'clang_cc="clang-10" clang_cxx="clang++-10" target_cpu="x64" is_clang=true'
+            os: ubuntu-20.04
+            install: "clang-10"
+            ninja_release_name: v1.7.2/ninja-linux.zip
+            gn_release_name: gn-linux-amd64.tar.gz
+
+          # disabled on master for now
+          # see: https://github.com/timniederhausen/gn-build/runs/2483312992#step:9:24
+          #- slug: macos-amd64
+          #  gen_args: 'is_clang=true is_official_build=true'
+          #  os: macos-10.15
+          #  ninja_release_name: v1.7.2/ninja-mac.zip
+          #  gn_release_name: gn-macos-amd64.tar.gz
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Install packages
+        if: matrix.install
+        run: sudo apt install ${{ matrix.install }}
+
+      - uses: actions/checkout@v2
+        with:
+          # we need all everything for `git describe` to work correctly
+          fetch-depth: 0
+
+      - name: Make dependencies directory
+        run: |
+          DEPS_DIR=$(cd ~; pwd)/deps
+          mkdir -p ${DEPS_DIR}
+          echo "export DEPS_DIR=$DEPS_DIR" >> "${GITHUB_WORKSPACE}/.env"
+
+      - name: Install recent Ninja
+        run: |
+          source .env
+          cd ${DEPS_DIR}
+          wget --no-check-certificate --quiet -O ninja.zip "${NINJA_BASE_URL}${{ matrix.ninja_release_name }}"
+          python -c 'import sys,zipfile;zipfile.ZipFile(sys.argv[1]).extractall()' ninja.zip
+          chmod +x ninja
+
+      - name: Install GN
+        run: |
+          source .env
+          cd ${DEPS_DIR}
+          wget --no-check-certificate --quiet -O gn.tgz "${GN_BASE_URL}${{ matrix.gn_release_name }}"
+          tar xvf gn.tgz
+          chmod +x gn
+
+      # Run gn_helpers unittests first - this should fail if we have an unsupported Python version
+      - name: Test gn_helpers
+        run: |
+          python3 gn_helpers_unittest.py
+
+      # Setup test project for our //build
+      - name: Setup test project
+        run: |
+          source .env
+          git clone --branch=testsrc --depth=1 https://github.com/timniederhausen/gn-build.git testsrc
+          echo script_executable = \"python3\" >> testsrc/.gn
+          mkdir testsrc/build
+          mv config testsrc/build/
+          mv toolchain testsrc/build/
+
+      # Try to build the test project
+      - name: Build
+        run: |
+          source .env
+          ${DEPS_DIR}/gn gen out --args='${{ matrix.gen_args }}' --root=testsrc
+          cat out/args.gn
+          ${DEPS_DIR}/ninja -C out
+          cd out &&  ./hello
