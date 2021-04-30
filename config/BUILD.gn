@@ -1340,6 +1340,8 @@ config("default_libs") {
       "m",
     ]
   } else if (is_mac) {
+    # you can mannuly set frameworks you want to use in here 
+    # or in your own moudle 
     configs = ["//build/config/mac:default_libs"]
   } else if (is_linux) {
     libs = [
