@@ -67,7 +67,7 @@ if (mac_use_sdk) {
       mac_sdk_min,
     ]
     find_sdk_lines =
-        exec_script("//build/mac/find_sdk.py", find_sdk_args, "list lines")
+        exec_script("//build/toolchain/mac/find_sdk.py", find_sdk_args, "list lines")
     mac_sdk_version = find_sdk_lines[2]
     if (mac_sdk_path == "") {
       mac_sdk_path = find_sdk_lines[0]

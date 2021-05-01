@@ -7,10 +7,9 @@
 # Linux.
 
 import("//build/toolchain/mac/settings.gni")
-import("//build/config/clang/clang.gni")
-import("//build/config/compiler/compiler.gni")
-import("//build/config/coverage/coverage.gni")
+import("//build/toolchain/clang.gni")
 import("//build/toolchain/cc_wrapper.gni")
+import("//build/toolchain/coverage.gni")
 import("//build/toolchain/toolchain.gni")
 
 assert((target_os == "ios" && host_os == "mac") || host_os != "win")
@@ -49,8 +48,8 @@ tool_versions =
                 rebase_path([
                               "//build/toolchain/apple/filter_libtool.py",
                               "//build/toolchain/apple/linker_driver.py",
-                              "//build/toolchain/ios/compile_xcassets.py",
-                              "//build/toolchain/ios/swiftc.py",
+#                              "//build/toolchain/ios/compile_xcassets.py",
+#                              "//build/toolchain/ios/swiftc.py",
                             ],
                             root_build_dir),
                 "trim scope")
@@ -308,9 +307,7 @@ template("apple_toolchain") {
       does_reexport_command = "[ ! -e \"$dylib\" -o ! -e \"$tocname\" ] || $otool -l \"$dylib\" | grep -q LC_REEXPORT_DYLIB"
 
       link_command = "$linker_driver $ld -shared "
-      if (is_component_build) {
-        link_command += " -Wl,-install_name,@rpath/\"{{target_output_name}}{{output_extension}}\" "
-      }
+      link_command += " -Wl,-install_name,@rpath/\"{{target_output_name}}{{output_extension}}\" "
       link_command += dsym_switch
       link_command += "{{ldflags}} -o \"$dylib\" -Wl,-filelist,\"$rspfile\" {{frameworks}} {{swiftmodules}} {{solibs}} {{libs}}"
 
@@ -360,9 +357,7 @@ template("apple_toolchain") {
       pool = "//build/toolchain:link_pool($default_toolchain)"
 
       link_command = "$linker_driver $ld -bundle {{ldflags}} -o \"$sofile\" -Wl,-filelist,\"$rspfile\""
-      if (is_component_build) {
-        link_command += " -Wl,-install_name,@rpath/{{target_output_name}}{{output_extension}}"
-      }
+      link_command += " -Wl,-install_name,@rpath/{{target_output_name}}{{output_extension}}"
       link_command += dsym_switch
       link_command += " {{frameworks}} {{swiftmodules}} {{solibs}} {{libs}}"
       command = link_command
