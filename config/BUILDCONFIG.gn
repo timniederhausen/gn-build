@@ -250,62 +250,24 @@ if (custom_toolchain != "") {
 # We set these various is_FOO booleans for convenience in writing OS-based
 # conditions.
 #
-# - is_android, is_freebsd, is_ios, and is_win should be obvious.
+# - is_android, is_chromeos, is_ios, is_freebsd, and is_win should be obvious.
 # - is_mac is set only for desktop Mac. It is not set on iOS.
 # - is_posix is true for mac and any Unix-like system (basically everything
-#   except Windows).
-# - is_linux is true for desktop Linux, but not Android (which is
-#   generally too different despite being based on the Linux kernel).
+#   except Fuchsia and Windows).
+# - is_linux is true for desktop Linux, but not for ChromeOS nor Android (which
+#   is generally too different despite being based on the Linux kernel).
 
-if (current_os == "win" || current_os == "winuwp") {
-  is_android = false
-  is_ios = false
-  is_linux = false
-  is_mac = false
-  is_posix = false
-  is_win = true
-  is_freebsd = false
-} else if (current_os == "mac") {
-  is_android = false
-  is_ios = false
-  is_linux = false
-  is_mac = true
-  is_posix = true
-  is_win = false
-  is_freebsd = false
-} else if (current_os == "android") {
-  is_android = true
-  is_ios = false
-  is_linux = false
-  is_mac = false
-  is_posix = true
-  is_win = false
-  is_freebsd = false
-} else if (current_os == "ios") {
-  is_android = false
-  is_ios = true
-  is_linux = false
-  is_mac = false
-  is_posix = true
-  is_win = false
-  is_freebsd = false
-} else if (current_os == "linux") {
-  is_android = false
-  is_ios = false
-  is_linux = true
-  is_mac = false
-  is_posix = true
-  is_win = false
-  is_freebsd = false
-} else if (current_os == "freebsd") {
-  is_android = false
-  is_ios = false
-  is_linux = false
-  is_mac = false
-  is_posix = true
-  is_win = false
-  is_freebsd = true
-}
+is_android = current_os == "android"
+is_chromeos = current_os == "chromeos"
+is_fuchsia = current_os == "fuchsia"
+is_ios = current_os == "ios"
+is_linux = current_os == "linux"
+is_mac = current_os == "mac"
+is_win = current_os == "win" || current_os == "winuwp"
+is_freebsd = current_os == "freebsd"
+
+is_apple = is_ios || is_mac
+is_posix = !is_win && !is_fuchsia
 
 # =============================================================================
 # TARGET DEFAULTS
@@ -315,6 +277,14 @@ if (current_os == "win" || current_os == "winuwp") {
 # The values configured here will be automatically set on the scope of the
 # corresponding target. Target definitions can add or remove to the settings
 # here as needed.
+#
+# WHAT GOES HERE?
+#
+# Other than the main compiler and linker configs, the only reason for a config
+# to be in this list is if some targets need to explicitly override that config
+# by removing it. This is how targets opt-out of flags. If you don't have that
+# requirement and just need to add a config everywhere, reference it as a
+# sub-config of an existing one, most commonly the main "compiler" one.
 
 # Holds all configs used for running the compiler.
 default_compiler_configs = [
