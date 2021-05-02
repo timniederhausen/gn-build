@@ -69,7 +69,7 @@ declare_args() {
   auto_profile_path = ""
 
   # Optimize for coverage guided fuzzing (balance between speed and number of
-  # branches)
+  # branches). Can be also used to remove non-determinism and other issues.
   optimize_for_fuzzing = false
 
   # Control stack protection guards. There should be no need to disable this.
@@ -1333,14 +1333,29 @@ config("release") {
 # This config defines the default libraries applied to all targets.
 config("default_libs") {
   if (is_win) {
-    libs = [ "kernel32.lib" ]
+    libs = []
+    if (current_os == "winuwp") {
+      # These libraries are needed for Windows UWP (i.e. store apps).
+      libs += [
+        "dloadhelper.lib",
+        "WindowsApp.lib",
+      ]
+    } else {
+      # These libraries are not compatible with Windows UWP (i.e. store apps.)
+      libs += [
+        "delayimp.lib",
+        "kernel32.lib",
+      ]
+    }
   } else if (is_android) {
     libs = [
       "dl",
       "m",
     ]
   } else if (is_mac) {
-    configs = ["//build/config/mac:default_libs"]
+    # Targets should choose to explicitly link frameworks they require. Since
+    # linking can have run-time side effects, nothing should be listed here.
+    libs = []
   } else if (is_linux) {
     libs = [
       "dl",

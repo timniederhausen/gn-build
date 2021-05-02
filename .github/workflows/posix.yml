@@ -55,11 +55,11 @@ jobs:
 
           # disabled on master for now
           # see: https://github.com/timniederhausen/gn-build/runs/2483312992#step:9:24
-          #- slug: macos-amd64
-          #  gen_args: 'is_clang=true is_official_build=true'
-          #  os: macos-10.15
-          #  ninja_release_name: v1.7.2/ninja-mac.zip
-          #  gn_release_name: gn-macos-amd64.tar.gz
+          - slug: macos-amd64
+            gen_args: 'is_clang=true is_official_build=true'
+            os: macos-10.15
+            ninja_release_name: v1.7.2/ninja-mac.zip
+            gn_release_name: gn-macos-amd64.tar.gz
 
     runs-on: ${{ matrix.os }}
 
@@ -96,6 +96,7 @@ jobs:
           chmod +x gn
 
       # Run gn_helpers unittests first - this should fail if we have an unsupported Python version
+      # Only support Python3+ for now, otherwise we have to ship the mocking lib
       - name: Test gn_helpers
         run: |
           python3 gn_helpers_unittest.py
@@ -105,16 +106,26 @@ jobs:
         run: |
           source .env
           git clone --branch=testsrc --depth=1 https://github.com/timniederhausen/gn-build.git testsrc
-          echo script_executable = \"python3\" >> testsrc/.gn
           mkdir testsrc/build
           mv config testsrc/build/
           mv toolchain testsrc/build/
+
+      # Try to generate ninja files with different python versions
+      - name: gen with python2
+        run: |
+          source .env
+          echo script_executable = \"python2\" >> testsrc/.gn
+          ${DEPS_DIR}/gn gen out --args='${{ matrix.gen_args }}' --root=testsrc
+      - name: gen with python3
+        run: |
+          source .env
+          echo script_executable = \"python3\" >> testsrc/.gn
+          ${DEPS_DIR}/gn gen out --args='${{ matrix.gen_args }}' --root=testsrc
 
       # Try to build the test project
       - name: Build
         run: |
           source .env
-          ${DEPS_DIR}/gn gen out --args='${{ matrix.gen_args }}' --root=testsrc
           cat out/args.gn
           ${DEPS_DIR}/ninja -C out
           cd out &&  ./hello
