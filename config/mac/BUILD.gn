@@ -87,7 +87,13 @@ config("runtime_library") {
 
 # On Mac, this is used for everything except static libraries.
 config("mac_dynamic_flags") {
-  ldflags = [ "-Wl,-ObjC" ]  # Always load Objective-C categories and classes.
+  ldflags = [
+    # Always load Objective-C categories and classes.
+    "-Wl,-ObjC",
+
+    # Load shared libraries next to the target.
+    "-Wl,-rpath,@loader_path/.",
+  ]
 }
 
 # On Mac, this is used only for executables.
