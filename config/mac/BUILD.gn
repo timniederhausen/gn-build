@@ -130,7 +130,7 @@ config("strip_all") {
 # This is included by reference in the //build/config/default_libs config.
 config("default_libs") {
   if (mac_use_sdk) {
-    libs = [
+    frameworks = [
       "AppKit.framework",
       "ApplicationServices.framework",
       "Carbon.framework",
