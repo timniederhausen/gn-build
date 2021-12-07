@@ -147,7 +147,7 @@ def GetEnv(arch):
   # The environment is saved as an "environment block" (see CreateProcess
   # and msvs_emulation for details). We convert to a dict here.
   # Drop last 2 NULs, one for list terminator, one for trailing vs. separator.
-  pairs = open(arch).read()[:-2].split('\0')
+  pairs = open(arch, encoding='utf-8').read()[:-2].split('\0')
   kvs = [item.split('=', 1) for item in pairs]
   return dict(kvs)
 
@@ -236,6 +236,7 @@ def DetectVisualStudioPath(version_as_year):
     '2015': '14.0',
     '2017': '15.0',
     '2019': '16.0',
+    '2022': '17.0',
   }
 
   if version_as_year not in year_to_version:
@@ -243,7 +244,7 @@ def DetectVisualStudioPath(version_as_year):
                      ' not supported. Supported versions are: %s') % (
                       version_as_year, ', '.join(year_to_version.keys())))
 
-  if version_as_year in ('2017', '2019'):
+  if int(version_as_year) >= 2017:
     # The VC++ 2017+ install location needs to be located using COM instead of
     # the registry. For details see:
     # https://blogs.msdn.microsoft.com/heaths/2016/09/15/changes-to-visual-studio-15-setup/
@@ -282,7 +283,7 @@ def DetectVisualStudioPath(version_as_year):
 
 
 def FindLatestVisualStudio():
-  for version_as_year in ['2019', '2017', '2015', '2013']:
+  for version_as_year in ['2022', '2019', '2017', '2015', '2013']:
     try:
       return version_as_year, DetectVisualStudioPath(version_as_year)
     except Exception:
