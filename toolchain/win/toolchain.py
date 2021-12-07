@@ -245,7 +245,7 @@ def DetectVisualStudioPath(version_as_year):
                      ' not supported. Supported versions are: %s') % (
                       version_as_year, ', '.join(year_to_version.keys())))
 
-  if version_as_year in ('2017', '2019', '2022'):
+  if int(version_as_year) >= 2017:
     # The VC++ 2017+ install location needs to be located using COM instead of
     # the registry. For details see:
     # https://blogs.msdn.microsoft.com/heaths/2016/09/15/changes-to-visual-studio-15-setup/
