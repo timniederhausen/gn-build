@@ -50,6 +50,7 @@ before_build:
   - git checkout -t origin/testsrc
 
 build_script:
+  - .\build\add_py3_env.bat
   - gn gen out --args="%GN_ARGS%"
   - type out\args.gn
   - ninja -C out
