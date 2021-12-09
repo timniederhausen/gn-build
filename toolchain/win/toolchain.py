@@ -189,6 +189,7 @@ def _GetClangMscVersionFromYear(version_as_year):
     '2015': '1900',
     '2017': '1910',
     '2019': '1920',
+    '2022': '1930',
   }
   if version_as_year not in year_to_version:
     raise Exception(('Visual Studio version %s (from version_as_year)'
