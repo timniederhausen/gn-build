@@ -1242,7 +1242,14 @@ config("symbols") {
         "-g2",
       ]
     } else {
-      cflags = [ "-g2" ]
+      if (dwarf_version > 0) {
+        cflags = [
+          "-gdwarf-$dwarf_version",
+          "-g2",
+        ]
+      } else {
+        cflags = [ "-g2" ]
+      }
     }
     if (use_debug_fission) {
       cflags += [ "-gsplit-dwarf" ]
