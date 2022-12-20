@@ -18,6 +18,9 @@ declare_args() {
   # http://blog.llvm.org/2016/06/thinlto-scalable-and-incremental-lto.html
   # TODO(tim): Supported on Windows?
   use_thin_lto = false
+
+  # Value of --gcc-toolchain
+  gcc_toolchain = ""
 }
 
 if (is_win && is_clang) {

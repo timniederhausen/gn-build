@@ -262,6 +262,12 @@ config("compiler") {
 
     cflags += [ "--gcc-toolchain=$_rebased_toolchain_root" ]
     ldflags += [ "--gcc-toolchain=$_rebased_toolchain_root" ]
+  } else if (gcc_toolchain != "" && is_clang) {
+    _rebased_toolchain_root =
+        rebase_path(gcc_toolchain, root_build_dir)
+
+    cflags += [ "--gcc-toolchain=$_rebased_toolchain_root" ]
+    ldflags += [ "--gcc-toolchain=$_rebased_toolchain_root" ]
   }
 
   if (is_posix && use_lld) {
