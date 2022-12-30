@@ -436,14 +436,24 @@ config("compiler_cpu_abi") {
     # CPU architecture. We may or may not be doing a cross compile now, so for
     # simplicity we always explicitly set the architecture.
     if (current_cpu == "x64") {
-      cflags += [
-        "-m64",
-        "-march=x86-64",
-      ]
-      ldflags += [ "-m64" ]
+      if (is_clang && is_linux && !is_android) {
+        cflags += [ "--target=x86_64-linux-gnu" ]
+        ldflags += [ "--target=x86_64-linux-gnu" ]
+      } else {
+        cflags += [
+          "-m64",
+          "-march=x86-64",
+        ]
+        ldflags += [ "-m64" ]
+      }
     } else if (current_cpu == "x86") {
-      cflags += [ "-m32" ]
-      ldflags += [ "-m32" ]
+      if (is_clang && is_linux && !is_android) {
+        cflags += [ "--target=i386-linux-gnu" ]
+        ldflags += [ "--target=i386-linux-gnu" ]
+      } else {
+        cflags += [ "-m32" ]
+        ldflags += [ "-m32" ]
+      }
     } else if (current_cpu == "arm") {
       if (is_clang && !is_android) {
         cflags += [ "--target=arm-linux-gnueabihf" ]
