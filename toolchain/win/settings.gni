@@ -57,20 +57,24 @@ if (visual_studio_path == "") {
 if (cached_toolchain_data != "") {
   toolchain_data = cached_toolchain_data
 } else {
-  toolchain_data = exec_script("toolchain.py",
-                               [
-                                 "setup_toolchain",
-                                 visual_studio_version,
-                                 visual_studio_path,
-                                 windows_sdk_version,
+  if (host_os == "win") {
+    toolchain_data = exec_script("toolchain.py",
+                                [
+                                  "setup_toolchain",
+                                  visual_studio_version,
+                                  visual_studio_path,
+                                  windows_sdk_version,
 
-                                 # Don't use clang_base_path directly, so we can
-                                 # skip clang detection if not needed
-                                 # (i.e. !is_clang).
-                                 _clang_base_path_arg,
-                                 _clang_msc_ver,
-                               ],
-                               "scope")
+                                  # Don't use clang_base_path directly, so we can
+                                  # skip clang detection if not needed
+                                  # (i.e. !is_clang).
+                                  _clang_base_path_arg,
+                                  _clang_msc_ver,
+                                ],
+                                "scope")
+  } else {
+    toolchain_data = read_file(rebase_path("//.msvc.toolchain"), "scope")
+  }
 }
 
 visual_studio_version = toolchain_data.visual_studio_version

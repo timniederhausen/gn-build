@@ -136,7 +136,11 @@ template("msvc_toolchain") {
     # mt.exe in PATH on non-Windows, so it's not needed there anyways.
     if (host_os != "win") {
       linker_wrapper = ""
-      sys_lib_flags = "${invoker.sys_lib_flags} "  # Note trailing space
+      if (defined(invoker.sys_lib_flags)) {
+        sys_lib_flags = "${invoker.sys_lib_flags} "  # Note trailing space
+      } else {
+        sys_lib_flags = ""
+      }
     } else if (defined(invoker.sys_lib_flags)) {
       # Invoke ninja as wrapper instead of tool wrapper, because python
       # invocation requires higher cpu usage compared to ninja invocation, and
