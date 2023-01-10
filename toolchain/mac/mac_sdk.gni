@@ -40,11 +40,15 @@ declare_args() {
 
   # If Xcode is not installed, and you are going to build standard C/C++ code only,
   # you should set it to false.
-  mac_use_sdk = true
+  if (host_os == "mac") {
+    mac_use_sdk = true
+  } else {
+    mac_use_sdk = false
+  }
 }
 
 sdk_info_args = []
-if (!use_system_xcode) {
+if (!use_system_xcode && use_xcode_clang) {
   sdk_info_args += [
     "--developer_dir",
     rebase_path(hermetic_xcode_path, "", root_build_dir),
