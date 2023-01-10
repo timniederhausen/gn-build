@@ -156,8 +156,8 @@ which is used for all POSIX systems that don't have special toolchains.
 
 * `android_ndk_root` (default: "$external/android_tools/ndk"):
   Path of the Android NDK.
-* `android_ndk_version` (default: "r12b"): NDK Version string.
-* `android_ndk_major_version` (default: 12): NDK Major version.
+* `android_ndk_version` (default: "r25b"): NDK Version string.
+* `android_ndk_major_version` (default: 25): NDK Major version.
 * `android_sdk_root` (default: "$external/android_tools/sdk"):
   Path of the Android SDK.
 * `android_sdk_version` (default: "24"): Android SDK version.
