@@ -3,6 +3,9 @@ if (is_clang) {
 }
 
 declare_args() {
+  # Use the system install of Visual Studio
+  use_visual_studio = true
+
   # Desired version of Visual Studio.
   # If visual_studio_path is set, this must be
   # the version of the VS installation at the visual_studio_path.
@@ -29,6 +32,12 @@ declare_args() {
 
   # Allows us to avoid multiple toolchain.py invocations for multi-toolchain builds.
   cached_toolchain_data = ""
+
+  visual_c_path = ""
+  windows_sdk_path = ""
+  netfx_sdk_path = ""
+  netfx_sdk_version = ""
+  clang_msc_full_ver = 0
 }
 
 assert(visual_studio_version != "", "visual_studio_version must be non-empty")
@@ -57,7 +66,7 @@ if (visual_studio_path == "") {
 if (cached_toolchain_data != "") {
   toolchain_data = cached_toolchain_data
 } else {
-  if (host_os == "win") {
+  if (use_visual_studio) {
     toolchain_data = exec_script("toolchain.py",
                                 [
                                   "setup_toolchain",
@@ -73,15 +82,55 @@ if (cached_toolchain_data != "") {
                                 ],
                                 "scope")
   } else {
-    toolchain_data = read_file(rebase_path("//.msvc.toolchain"), "scope")
+    # toolchain_data = read_file(rebase_path("//.msvc.toolchain"), "scope")
+    toolchain_data = {
+      msc_ver=clang_msc_ver
+      msc_full_ver=clang_msc_full_ver
+      x86 = {
+        env_filename = ""
+        vc_bin_dir = ""
+        include_flags_I = "\"/I$visual_c_path/include\" \"/I$visual_c_path/atlmfc/include\" \"/I$visual_c_path/auxiliary/vs/include\" \"/I$windows_sdk_path/include/$windows_sdk_version/ucrt\" \"/I$windows_sdk_path/include/$windows_sdk_version/um\" \"/I$windows_sdk_path/include/$windows_sdk_version/shared\" \"/I$windows_sdk_path/include/$windows_sdk_version/winrt\" \"/I$windows_sdk_path/include/$windows_sdk_version/cppwinrt\" \"/I$netfx_sdk_path/$netfx_sdk_version/include/um\""
+        include_flags_imsvc = "\"-imsvc$visual_c_path/include\" \"-imsvc$visual_c_path/atlmfc/include\" \"-imsvc$visual_c_path/auxiliary/vs/include\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/ucrt\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/um\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/shared\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/winrt\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/cppwinrt\" \"-imsvc$netfx_sdk_path/$netfx_sdk_version/include/um\""
+        vc_lib_path = "$visual_c_path/lib/x86"
+        vc_lib_atlmfc_path = "$visual_c_path/atlmfc/lib/x86"
+        vc_lib_um_path = "$windows_sdk_path/lib/$windows_sdk_version/um/x86"
+        paths = ""
+        libpath_flags = "\"-libpath:$visual_c_path/atlmfc/lib/x86\" \"-libpath:$visual_c_path/lib/x86\" \"-libpath:$netfx_sdk_path/$netfx_sdk_version/lib/um/x86\" \"-libpath:$windows_sdk_path/lib/$windows_sdk_version/ucrt/x86\" \"-libpath:$windows_sdk_path/lib/$windows_sdk_version/um/x86\""
+      }
+      x86_uwp = {
+        env_filename = ""
+        vc_bin_dir = ""
+        include_flags_I = "\"/I$visual_c_path/include\" \"/I$visual_c_path/atlmfc/include\" \"/I$visual_c_path/auxiliary/vs/include\" \"/I$windows_sdk_path/include/$windows_sdk_version/ucrt\" \"/I$windows_sdk_path/include/$windows_sdk_version/um\" \"/I$windows_sdk_path/include/$windows_sdk_version/shared\" \"/I$windows_sdk_path/include/$windows_sdk_version/winrt\" \"/I$windows_sdk_path/include/$windows_sdk_version/cppwinrt\" \"/I$netfx_sdk_path/$netfx_sdk_version/include/um\""
+        include_flags_imsvc = "\"-imsvc$visual_c_path/include\" \"-imsvc$visual_c_path/atlmfc/include\" \"-imsvc$visual_c_path/auxiliary/vs/include\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/ucrt\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/um\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/shared\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/winrt\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/cppwinrt\" \"-imsvc$netfx_sdk_path/$netfx_sdk_version/include/um\""
+        vc_lib_path = "$visual_c_path/lib/x86/store"
+        vc_lib_um_path = "$windows_sdk_path/lib/$windows_sdk_version/um/x86"
+        paths = ""
+        libpath_flags = "\"-libpath:$visual_c_path/lib/x86/store/\" \"-libpath:$netfx_sdk_path/$netfx_sdk_version/lib/um/x86\" \"-libpath:$windows_sdk_path/lib/$windows_sdk_version/ucrt/x86\" \"-libpath:$windows_sdk_path/lib/$windows_sdk_version/um/x86\""
+      }
+      x64 = {
+        env_filename = ""
+        vc_bin_dir = ""
+        include_flags_I = "\"/I$visual_c_path/include\" \"/I$visual_c_path/atlmfc/include\" \"/I$visual_c_path/auxiliary/vs/include\" \"/I$windows_sdk_path/include/$windows_sdk_version/ucrt\" \"/I$windows_sdk_path/include/$windows_sdk_version/um\" \"/I$windows_sdk_path/include/$windows_sdk_version/shared\" \"/I$windows_sdk_path/include/$windows_sdk_version/winrt\" \"/I$windows_sdk_path/include/$windows_sdk_version/cppwinrt\" \"/I$netfx_sdk_path/$netfx_sdk_version/include/um\""
+        include_flags_imsvc = "\"-imsvc$visual_c_path/include\" \"-imsvc$visual_c_path/atlmfc/include\" \"-imsvc$visual_c_path/auxiliary/vs/include\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/ucrt\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/um\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/shared\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/winrt\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/cppwinrt\" \"-imsvc$netfx_sdk_path/$netfx_sdk_version/include/um\""
+        vc_lib_path = "$visual_c_path/lib/x64"
+        vc_lib_atlmfc_path = "$visual_c_path/atlmfc/lib/x64"
+        vc_lib_um_path = "$windows_sdk_path/lib/$windows_sdk_version/um/x64"
+        paths = ""
+        libpath_flags = "\"-libpath:$visual_c_path/atlmfc/lib/x64\" \"-libpath:$visual_c_path/lib/x64\" \"-libpath:$netfx_sdk_path/$netfx_sdk_version/lib/um/x64\" \"-libpath:$windows_sdk_path/lib/$windows_sdk_version/ucrt/x64\" \"-libpath:$windows_sdk_path/lib/$windows_sdk_version/um/x64\""
+      }
+      x64_uwp = {
+        env_filename = ""
+        vc_bin_dir = ""
+        include_flags_I = "\"/I$visual_c_path/include\" \"/I$visual_c_path/atlmfc/include\" \"/I$visual_c_path/auxiliary/vs/include\" \"/I$windows_sdk_path/include/$windows_sdk_version/ucrt\" \"/I$windows_sdk_path/include/$windows_sdk_version/um\" \"/I$windows_sdk_path/include/$windows_sdk_version/shared\" \"/I$windows_sdk_path/include/$windows_sdk_version/winrt\" \"/I$windows_sdk_path/include/$windows_sdk_version/cppwinrt\" \"/I$netfx_sdk_path/$netfx_sdk_version/include/um\""
+        include_flags_imsvc = "\"-imsvc$visual_c_path/include\" \"-imsvc$visual_c_path/atlmfc/include\" \"-imsvc$visual_c_path/auxiliary/vs/include\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/ucrt\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/um\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/shared\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/winrt\" \"-imsvc$windows_sdk_path/include/$windows_sdk_version/cppwinrt\" \"-imsvc$netfx_sdk_path/$netfx_sdk_version/include/um\""
+        vc_lib_path = "$visual_c_path/lib/x64/store"
+        vc_lib_um_path = "$windows_sdk_path/lib/$windows_sdk_version/um/x64"
+        paths = ""
+        libpath_flags = "\"-libpath:$visual_c_path/lib/x64/store/\" \"-libpath:$netfx_sdk_path/$netfx_sdk_version/lib/um/x64\" \"-libpath:$windows_sdk_path/lib/$windows_sdk_version/ucrt/x64\" \"-libpath:$windows_sdk_path/lib/$windows_sdk_version/um/x64\""
+      }
+    }
   }
 }
-
-visual_studio_version = toolchain_data.visual_studio_version
-visual_studio_path = toolchain_data.visual_studio_path
-
-# Full path to the Windows SDK, not including a backslash at the end.
-windows_sdk_path = toolchain_data.windows_sdk_path
 
 # Value of the _MSC_VER variable.
 # see: https://msdn.microsoft.com/en-us/library/b0084kay.aspx
