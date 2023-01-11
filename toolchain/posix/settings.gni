@@ -29,7 +29,7 @@ declare_args() {
 
 if (is_clang && clang_cc == 0) {
   if (clang_base_path != "") {
-    clang_cc = "$clang_base_path/clang"
+    clang_cc = "$clang_base_path/bin/clang"
   } else {
     clang_cc = "clang"
   }
@@ -37,7 +37,7 @@ if (is_clang && clang_cc == 0) {
 
 if (is_clang && clang_cxx == 0) {
   if (clang_base_path != "") {
-    clang_cxx = "$clang_base_path/clang++"
+    clang_cxx = "$clang_base_path/bin/clang++"
   } else {
     clang_cxx = "clang++"
   }
