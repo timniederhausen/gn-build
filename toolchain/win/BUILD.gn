@@ -172,7 +172,7 @@ template("msvc_toolchain") {
       # different flags.
       # See https://bugzilla.mozilla.org/show_bug.cgi?id=1340588
       # and https://hg.mozilla.org/mozilla-central/rev/30dc6c484d42
-      show_includes = "-Xclang -dependency-file -Xclang \"{{output}}.d\" -Xclang -MT -Xclang {{source}} -Xclang -MP -Xclang -MG"
+      show_includes = "-Xclang -dependency-file -Xclang {{output}}.d -Xclang -MT -Xclang {{source}} -Xclang -MP -Xclang -MG"
     } else {
       show_includes = "/showIncludes"
     }
