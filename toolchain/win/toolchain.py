@@ -311,9 +311,12 @@ def SetupToolchain(version_as_year, vs_path, sdk_version=None,
   # doesn't seem to cause problems.
   if 'VSINSTALLDIR' in os.environ:
     del os.environ['VSINSTALLDIR']
-    del os.environ['INCLUDE']
-    del os.environ['LIB']
-    del os.environ['LIBPATH']
+    if 'INCLUDE' in os.environ:
+      del os.environ['INCLUDE']
+    if 'LIB' in os.environ:
+      del os.environ['LIB']
+    if 'LIBPATH' in os.environ:
+      del os.environ['LIBPATH']
 
   if version_as_year == 'latest':
     version_as_year, vs_path = FindLatestVisualStudio()
