@@ -61,6 +61,7 @@ def SetConfigPath(options):
 
   libdir = sysroot + '/usr/' + options.system_libdir + '/pkgconfig'
   libdir += ':' + sysroot + '/usr/share/pkgconfig'
+  libdir = libdir.replace('/', os.sep)
   os.environ['PKG_CONFIG_LIBDIR'] = libdir
   return libdir
 
@@ -106,17 +107,15 @@ def RewritePath(path, strip_prefix, sysroot):
 
 
 def main():
-  # If this is run on non-Linux platforms, just return nothing and indicate
-  # success. This allows us to "kind of emulate" a Linux build from other
-  # platforms.
-  if "linux" not in sys.platform and "darwin" not in sys.platform:
-    print("[[],[],[],[],[]]")
-    return 0
-
   parser = OptionParser()
   parser.add_option('-d', '--debug', action='store_true')
-  parser.add_option('-p', action='store', dest='pkg_config', type='string',
-                    default='pkg-config')
+  if "windows" in sys.platform:
+    parser.add_option('-p', action='store', dest='pkg_config', type='string',
+                      default='pkg-config.exe')
+  else:
+    parser.add_option('-p', action='store', dest='pkg_config', type='string',
+                      default='pkg-config')
+
   parser.add_option('-v', action='append', dest='strip_out', type='string')
   parser.add_option('-s', action='store', dest='sysroot', type='string')
   parser.add_option('-a', action='store', dest='arch', type='string')
