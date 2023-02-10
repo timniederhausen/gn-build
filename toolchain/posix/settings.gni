@@ -25,6 +25,9 @@ declare_args() {
 
   # Path of the 'nm' utility.
   nm = "nm"
+
+  # Path of the 'strip' utility.
+  strip = "strip"
 }
 
 if (is_clang && clang_cc == 0) {
