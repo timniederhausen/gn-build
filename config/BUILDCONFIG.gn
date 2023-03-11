@@ -146,6 +146,9 @@ declare_args() {
   # can depend on each other (e.g. $external/mysql_connector -> $external/zlib)
   external = "//external"
 
+  # Specify C++ Version
+  cpp_version = "c++17"
+
   # DON'T ADD MORE FLAGS HERE. Read the comment above.
 }
 
@@ -298,7 +301,7 @@ default_compiler_configs = [
   "//build/config:default_optimization",
   "//build/config:default_stack_frames",
   "//build/config:default_symbols",
-  "//build/config:c++17",
+  "//build/config:$cpp_version",
   "//build/config:rtti",
   "//build/config:exceptions",
   "//build/config:runtime_library",
