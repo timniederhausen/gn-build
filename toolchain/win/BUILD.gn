@@ -173,9 +173,11 @@ template("msvc_toolchain") {
       # clang-cl, not even when prefixed with `-Xclang`. The underlying cc1
       # binary does know how to generate depfiles but it requires somewhat
       # different flags.
-      # See https://bugzilla.mozilla.org/show_bug.cgi?id=1340588
-      # and https://hg.mozilla.org/mozilla-central/rev/30dc6c484d42
-      show_includes = "-Xclang -dependency-file -Xclang {{output}}.d -Xclang -MT -Xclang {{source}} -Xclang -MP -Xclang -MG"
+      # See:
+      # - https://bugzilla.mozilla.org/show_bug.cgi?id=1340588
+      # - https://hg.mozilla.org/mozilla-central/rev/30dc6c484d42
+      # - https://hg.mozilla.org/mozilla-central/rev/9935b243c9a3
+      show_includes = "-Xclang -dependency-file -Xclang {{output}}.d -Xclang -MT -Xclang {{source}} -Xclang -MP"
     } else {
       show_includes = "/showIncludes"
     }
