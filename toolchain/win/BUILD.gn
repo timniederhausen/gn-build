@@ -32,6 +32,10 @@ if (host_os == "win") {
   _exe = ""
 }
 
+_clang_bin_path = rebase_path("$clang_base_path/bin", root_build_dir)
+
+# Makes a single MSVC toolchain.
+#
 # Parameters:
 #   environment: File name of environment file.
 #
@@ -100,15 +104,10 @@ template("msvc_toolchain") {
     env = invoker.environment
 
     if (use_lld) {
-      if (host_os == "win") {
-        lld_link = "lld-link.exe"
-      } else {
-        lld_link = "lld-link"
-      }
-
       # lld-link includes a replacement for lib.exe that can produce thin
       # archives and understands bitcode (for lto builds).
-      link = "\"$clang_base_path/bin/$lld_link\""
+      link = "${_clang_bin_path}/lld-link${_exe}"
+      cc_linkflags = ""
       if (host_os == "win") {
         # Flip the slashes so that copy/paste of the commands works.
         link = string_replace(link, "/", "\\")
@@ -116,11 +115,12 @@ template("msvc_toolchain") {
       lib = "$link /lib"
       if (host_os != "win") {
         # See comment adding --rsp-quoting to $cl above for more information.
-        link = "$link --rsp-quoting=posix"
+        cc_linkflags += " --rsp-quoting=posix"
       }
     } else {
       lib = "lib.exe"
       link = "link.exe"
+      cc_linkflags = ""
     }
 
     # If possible, pass system includes as flags to the compiler.  When that's
@@ -129,7 +129,8 @@ template("msvc_toolchain") {
     # passing in a list of include directories isn't enough.
     if (defined(invoker.sys_include_flags)) {
       env_wrapper = ""
-      sys_include_flags = "${invoker.sys_include_flags} "  # Note trailing space.
+      sys_include_flags =
+          "${invoker.sys_include_flags} "  # Note trailing space.
     } else {
       # clang-cl doesn't need this env hoop, so omit it there.
       assert(!toolchain_is_clang)
@@ -272,7 +273,7 @@ template("msvc_toolchain") {
       rspfile = "${dllname}.rsp"
       pool = "//build/toolchain:link_pool($default_toolchain)"
 
-      command = "$linker_wrapper$link /OUT:$dllname /nologo ${sys_lib_flags}/IMPLIB:$libname /DLL /PDB:$pdbname @$rspfile"
+      command = "$linker_wrapper$link$cc_linkflags /OUT:$dllname /nologo ${sys_lib_flags}/IMPLIB:$libname /DLL /PDB:$pdbname @$rspfile"
 
       default_output_extension = ".dll"
       default_output_dir = "{{root_out_dir}}"
@@ -307,7 +308,7 @@ template("msvc_toolchain") {
       rspfile = "${dllname}.rsp"
       pool = "//build/toolchain:link_pool($default_toolchain)"
 
-      command = "$linker_wrapper$link /OUT:$dllname /nologo ${sys_lib_flags}/DLL /PDB:$pdbname @$rspfile"
+      command = "$linker_wrapper$link$cc_linkflags /OUT:$dllname /nologo ${sys_lib_flags}/DLL /PDB:$pdbname @$rspfile"
 
       default_output_extension = ".dll"
       default_output_dir = "{{root_out_dir}}"
@@ -332,7 +333,7 @@ template("msvc_toolchain") {
       rspfile = "$exename.rsp"
       pool = "//build/toolchain:link_pool($default_toolchain)"
 
-      command = "$linker_wrapper$link /OUT:$exename /nologo ${sys_lib_flags} /PDB:$pdbname @$rspfile"
+      command = "$linker_wrapper$link$cc_linkflags /OUT:$exename /nologo ${sys_lib_flags} /PDB:$pdbname @$rspfile"
 
       if (linkrepro_root_dir != "") {
         # Create the directory that will receive the link repro for this target
@@ -400,7 +401,7 @@ template("target_combo_toolchains") {
 
   msvc_toolchain("clang_" + cpu) {
     environment = tgt_toolchain_data.env_filename
-    cl = "$clang_base_path/bin/clang-cl${_exe}"
+    cl = "${_clang_bin_path}/clang-cl${_exe}"
     if (host_os == "win") {
       # Flip the slashes so that copy/paste of the command works.
       cl = string_replace(cl, "/", "\\")
