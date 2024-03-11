@@ -27,29 +27,29 @@ jobs:
         include:
           - slug: linux-gcc-i386
             gen_args: 'gcc_cc="gcc-10" gcc_cxx="g++-10" target_cpu="x86" is_clang=false'
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             install: "g++-10-multilib"
             ninja_release_name: v1.7.2/ninja-linux.zip
             gn_release_name: gn-linux-amd64.tar.gz
 
           - slug: linux-gcc-amd64
             gen_args: 'gcc_cc="gcc-10" gcc_cxx="g++-10" target_cpu="x64" is_clang=false'
-            os: ubuntu-20.04
+            os: ubuntu-22.04
             install: "g++-10"
             ninja_release_name: v1.7.2/ninja-linux.zip
             gn_release_name: gn-linux-amd64.tar.gz
 
           - slug: linux-clang-i386
-            gen_args: 'clang_cc="clang-10" clang_cxx="clang++-10" target_cpu="x86" is_clang=true'
-            os: ubuntu-20.04
-            install: "clang-10 g++-multilib"
+            gen_args: 'clang_cc="clang-14" clang_cxx="clang++-14" target_cpu="x86" is_clang=true'
+            os: ubuntu-22.04
+            install: "clang-14 g++-multilib"
             ninja_release_name: v1.7.2/ninja-linux.zip
             gn_release_name: gn-linux-amd64.tar.gz
 
           - slug: linux-clang-amd64
-            gen_args: 'clang_cc="clang-10" clang_cxx="clang++-10" target_cpu="x64" is_clang=true'
-            os: ubuntu-20.04
-            install: "clang-10"
+            gen_args: 'clang_cc="clang-14" clang_cxx="clang++-14" target_cpu="x64" is_clang=true'
+            os: ubuntu-22.04
+            install: "clang-14"
             ninja_release_name: v1.7.2/ninja-linux.zip
             gn_release_name: gn-linux-amd64.tar.gz
 
@@ -57,7 +57,7 @@ jobs:
           # see: https://github.com/timniederhausen/gn-build/runs/2483312992#step:9:24
           - slug: macos-amd64
             gen_args: 'is_clang=true is_official_build=true'
-            os: macos-10.15
+            os: macos-12
             ninja_release_name: v1.7.2/ninja-mac.zip
             gn_release_name: gn-macos-amd64.tar.gz
 
@@ -68,7 +68,7 @@ jobs:
         if: matrix.install
         run: sudo apt install ${{ matrix.install }}
 
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
         with:
           # we need all everything for `git describe` to work correctly
           fetch-depth: 0
@@ -111,11 +111,6 @@ jobs:
           mv toolchain testsrc/build/
 
       # Try to generate ninja files with different python versions
-      - name: gen with python2
-        run: |
-          source .env
-          echo script_executable = \"python2\" >> testsrc/.gn
-          ${DEPS_DIR}/gn gen out --args='${{ matrix.gen_args }}' --root=testsrc
       - name: gen with python3
         run: |
           source .env
