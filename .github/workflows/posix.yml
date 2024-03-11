@@ -17,7 +17,7 @@ on:
 
 env:
   NINJA_BASE_URL: https://github.com/ninja-build/ninja/releases/download/
-  GN_BASE_URL: https://github.com/timniederhausen/gn/releases/download/2020.09/
+  GN_BASE_URL: https://github.com/timniederhausen/gn/releases/download/2021.03/
 
 jobs:
   posix:

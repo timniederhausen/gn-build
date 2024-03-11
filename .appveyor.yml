@@ -3,7 +3,7 @@ clone_folder: c:\projects\gn-build\build
 shallow_clone: true
 
 environment:
-  GN_WIN_URL: https://github.com/timniederhausen/gn/releases/download/2020.03/gn-win-amd64.zip
+  GN_WIN_URL: https://github.com/timniederhausen/gn/releases/download/2021.03/gn-win-amd64.zip
 
   matrix:
     - GN_ARGS: "visual_studio_version=\\\"2013\\\""
