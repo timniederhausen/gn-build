@@ -1,0 +1,97 @@
+name: Windows
+
+on:
+  pull_request:
+    branches:
+      - master
+      - develop
+      - feature/**
+  push:
+    branches:
+      - master
+      - develop
+      - feature/**
+  workflow_dispatch:
+  release:
+    types: published
+
+env:
+  NINJA_BASE_URL: https://github.com/ninja-build/ninja/releases/download/
+  GN_BASE_URL: https://github.com/timniederhausen/gn/releases/download/2021.03/
+
+jobs:
+  windows:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # 2019
+          - slug: windows-2019 debug
+            gen_args: 'is_official_build = false'
+            os: windows-2019
+            ninja_release_name: v1.7.2/ninja-win.zip
+            gn_release_name: gn-win-amd64.zip
+
+          - slug: windows-2019 official
+            gen_args: 'is_official_build = true'
+            os: windows-2019
+            ninja_release_name: v1.7.2/ninja-win.zip
+            gn_release_name: gn-win-amd64.zip
+
+          # 2022
+          - slug: windows-2022 debug
+            gen_args: 'is_official_build = false'
+            os: windows-2022
+            ninja_release_name: v1.7.2/ninja-win.zip
+            gn_release_name: gn-win-amd64.zip
+
+          - slug: windows-2022 official
+            gen_args: 'is_official_build = true'
+            os: windows-2022
+            ninja_release_name: v1.7.2/ninja-win.zip
+            gn_release_name: gn-win-amd64.zip
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # we need all everything for `git describe` to work correctly
+          fetch-depth: 0
+
+      - name: Install recent Ninja
+        run: |
+          Invoke-WebRequest -OutFile ninja.zip -Uri "${{ env.NINJA_BASE_URL }}${{ matrix.ninja_release_name }}"
+          python -c 'import sys,zipfile;zipfile.ZipFile(sys.argv[1]).extractall()' ninja.zip
+
+      - name: Install GN
+        run: |
+          Invoke-WebRequest -OutFile gn.zip -Uri "${{ env.GN_BASE_URL }}${{ matrix.gn_release_name }}"
+          python -c 'import sys,zipfile;zipfile.ZipFile(sys.argv[1]).extractall()' gn.zip
+
+      # Run gn_helpers unittests first - this should fail if we have an unsupported Python version
+      # Only support Python3+ for now, otherwise we have to ship the mocking lib
+      - name: Test gn_helpers
+        run: |
+          python3 gn_helpers_unittest.py
+
+      # Setup test project for our //build
+      - name: Setup test project
+        run: |
+          git clone --branch=testsrc --depth=1 https://github.com/timniederhausen/gn-build.git testsrc
+          mkdir testsrc/build
+          mv *.py testsrc/build/
+          mv config testsrc/build/
+          mv toolchain testsrc/build/
+
+      # Try to generate ninja files with different python versions
+      - name: gen with python3
+        run: |
+          .\gn.exe gen out --args='${{ matrix.gen_args }}' --root=testsrc
+
+      # Try to build the test project
+      - name: Build
+        run: |
+          cat out/args.gn
+          .\ninja.exe -C out
+          cd out &&  ./hello

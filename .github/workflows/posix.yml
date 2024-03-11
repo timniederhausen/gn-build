@@ -107,6 +107,7 @@ jobs:
           source .env
           git clone --branch=testsrc --depth=1 https://github.com/timniederhausen/gn-build.git testsrc
           mkdir testsrc/build
+          mv *.py testsrc/build/
           mv config testsrc/build/
           mv toolchain testsrc/build/
 
