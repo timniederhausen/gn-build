@@ -297,38 +297,15 @@ def GetVsPath(version_as_year):
   print(DetectVisualStudioPath(version_as_year))
 
 
-def SetupToolchain(version_as_year, vs_path, sdk_version=None,
-                   clang_base_path=None, clang_msc_ver=None):
+def SetupToolchainTargetCombos(vs_path, sdk_version=None, force=False):
   cpus = ('x86', 'x64', 'arm', 'arm64')
-
-  # vcvarsall.bat for VS 2017 fails if run after running vcvarsall.bat from
-  # VS 2013 or VS 2015. Fix this by clearing the vsinstalldir environment
-  # variable.
-  # Since vcvarsall.bat appends to the INCLUDE, LIB, and LIBPATH
-  # environment variables we need to clear those to avoid getting double
-  # entries when vcvarsall.bat has been run before gn gen. vcvarsall.bat
-  # also adds to PATH, but there is no clean way of clearing that and it
-  # doesn't seem to cause problems.
-  if 'VSINSTALLDIR' in os.environ:
-    del os.environ['VSINSTALLDIR']
-    if 'INCLUDE' in os.environ:
-      del os.environ['INCLUDE']
-    if 'LIB' in os.environ:
-      del os.environ['LIB']
-    if 'LIBPATH' in os.environ:
-      del os.environ['LIBPATH']
-
-  if version_as_year == 'latest':
-    version_as_year, vs_path = FindLatestVisualStudio()
-  elif not vs_path or vs_path == 'default':
-    vs_path = DetectVisualStudioPath(version_as_year)
 
   # TODO(tim): We now launch all processes at once, but this still takes too long
   processes = {}
   for (cpu, is_uwp) in itertools.product(cpus, (False, True)):
     name = cpu + ('_uwp' if is_uwp else '')
     env_filename = 'environment_{}'.format(name)
-    if not os.path.exists(env_filename):
+    if force or not os.path.exists(env_filename):
       processes[name] = _Spawn(_BuildToolchainSetupCommand(vs_path, cpu, sdk_version, is_uwp))
 
   windows_sdk_paths = {}
@@ -338,7 +315,7 @@ def SetupToolchain(version_as_year, vs_path, sdk_version=None,
     env_filename = 'environment_{}'.format(name)
     # Load environment variables.
     env = LoadEnvFromCache(env_filename)
-    if env is None:
+    if force or env is None:
       # Extract environment variables for subprocesses.
       env = _ExtractImportantEnvironment(_ProcessSpawnResult(processes[name]))
       SaveEnv(env_filename, env)
@@ -424,8 +401,40 @@ def SetupToolchain(version_as_year, vs_path, sdk_version=None,
     print('libpath_flags = ' + gn_helpers.ToGNString(libpath_flags))
     print('}')
 
+  return envs, windows_sdk_paths
+
+
+def SetupToolchain(version_as_year, vs_path, sdk_version=None,
+                   clang_base_path=None, clang_msc_ver=None):
+  # vcvarsall.bat for VS 2017 fails if run after running vcvarsall.bat from
+  # VS 2013 or VS 2015. Fix this by clearing the vsinstalldir environment
+  # variable.
+  # Since vcvarsall.bat appends to the INCLUDE, LIB, and LIBPATH
+  # environment variables we need to clear those to avoid getting double
+  # entries when vcvarsall.bat has been run before gn gen. vcvarsall.bat
+  # also adds to PATH, but there is no clean way of clearing that and it
+  # doesn't seem to cause problems.
+  if 'VSINSTALLDIR' in os.environ:
+    del os.environ['VSINSTALLDIR']
+    if 'INCLUDE' in os.environ:
+      del os.environ['INCLUDE']
+    if 'LIB' in os.environ:
+      del os.environ['LIB']
+    if 'LIBPATH' in os.environ:
+      del os.environ['LIBPATH']
+
+  if version_as_year == 'latest':
+    version_as_year, vs_path = FindLatestVisualStudio()
+  elif not vs_path or vs_path == 'default':
+    vs_path = DetectVisualStudioPath(version_as_year)
+
+  envs, windows_sdk_paths = SetupToolchainTargetCombos(vs_path, sdk_version)
   if not windows_sdk_paths:
-    raise Exception("No usable Windows SDK found")
+    # Retry with new environment files
+    envs, windows_sdk_paths = SetupToolchainTargetCombos(vs_path, sdk_version, force=True)
+    if not windows_sdk_paths:
+      # Still nothing? Give up
+      raise Exception("No usable Windows SDK found")
 
   if len(set(windows_sdk_paths.values())) != 1:
     raise Exception("Different WINDOWSSDKDIR values for different CPUs are unsupported")
