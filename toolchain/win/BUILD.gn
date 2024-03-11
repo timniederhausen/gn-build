@@ -3,10 +3,10 @@
 # found in the LICENSE file.
 
 import("//build/config/sanitizers/sanitizers.gni")
-import("//build/toolchain/win/settings.gni")
+import("//build/toolchain/clang.gni")
 import("//build/toolchain/clang_static_analyzer.gni")
 import("//build/toolchain/toolchain.gni")
-import("//build/toolchain/clang.gni")
+import("//build/toolchain/win/settings.gni")
 
 assert(is_win, "Should only be running on Windows")
 
@@ -24,6 +24,10 @@ declare_args() {
   #
   # See crbug.com/669854.
   linkrepro_root_dir = ""
+
+  # Some files cannot be assembled by llvm-ml yet, so provide an option to disable it
+  # see: https://sourceforge.net/p/sevenzip/discussion/45797/thread/768932e9dd/?limit=25#0d6c
+  disable_llvm_ml = false
 }
 
 if (host_os == "win") {
@@ -68,28 +72,26 @@ template("msvc_toolchain") {
     # toolchain args, use those values, otherwise default to the global one.
     # This works because the only reasonable override that toolchains might
     # supply for these values are to force-disable them.
+    if (toolchain_is_clang && use_clang_static_analyzer) {
+      cl_prefix = "$python_path " + rebase_path(
+                      "//build/toolchain/clang_static_analyzer_wrapper.py",
+                      root_build_dir) + " --mode=cl "
+    } else {
+      cl_prefix = ""
+    }
+
+    cl = "${cl_prefix}${invoker.cl}"
+    if (host_os == "win") {
+      # Flip the slashes so that copy/paste of the command works.
+      cl = string_replace(cl, "/", "\\")
+    }
 
     if (toolchain_is_clang && host_os != "win") {
       # This toolchain definition uses response files for compilations.  GN uses
       # the quoting rules of the host OS, while clang-cl always defaults to
       # cmd.exe quoting rules for parsing response files.  Tell clang-cl to use
       # POSIX quoting rules, so it can understand what GN generates.
-      cl = "${invoker.cl} --rsp-quoting=posix"
-    } else {
-      cl = invoker.cl
-    }
-
-    if (toolchain_is_clang && use_clang_static_analyzer) {
-      analyzer_prefix =
-          "$python_path " +
-          rebase_path("//build/toolchain/clang_static_analyzer_wrapper.py",
-                      root_build_dir) + " --mode=cl"
-      cl = "${analyzer_prefix} ${cl}"
-    }
-
-    if (host_os == "win") {
-      # Flip the slashes so that copy/paste of the command works.
-      cl = string_replace(cl, "/", "\\")
+      cl += " --rsp-quoting=posix"
     }
 
     # Make these apply to all tools below.
@@ -183,9 +185,7 @@ template("msvc_toolchain") {
       pdbname = "{{target_out_dir}}/{{label_name}}_c.pdb"
 
       description = "CC {{output}}"
-      outputs = [
-        "$object_path.obj",
-      ]
+      outputs = [ "$object_path.obj" ]
 
       if (toolchain_is_clang) {
         depsformat = "gcc"
@@ -207,9 +207,7 @@ template("msvc_toolchain") {
       pdbname = "{{target_out_dir}}/{{label_name}}_cc.pdb"
 
       description = "CXX {{output}}"
-      outputs = [
-        "$object_path.obj",
-      ]
+      outputs = [ "$object_path.obj" ]
 
       if (toolchain_is_clang) {
         depsformat = "gcc"
@@ -227,30 +225,81 @@ template("msvc_toolchain") {
           rebase_path("//build/toolchain/win/rc_wrapper.py", root_build_dir)
       command = "$python_path $rc_wrapper $env {{source}} {{output}} rc.exe {{defines}} {{include_dirs}}"
       depsformat = "msvc"
-      outputs = [
-        "$object_path.res",
-      ]
+      outputs = [ "$object_path.res" ]
       description = "RC {{output}}"
     }
 
     tool("asm") {
-      if (toolchain_args.current_cpu == "x64") {
-        ml = "ml64.exe"
+      is_msvc_assembler = true
+
+      if (toolchain_args.current_cpu == "arm64") {
+        if (toolchain_is_clang) {
+          ml = "${cl_prefix}${_clang_bin_path}/clang-cl${_exe} --target=aarch64-pc-windows"
+          if (host_os == "win") {
+            # Flip the slashes so that copy/paste of the command works.
+            ml = string_replace(ml, "/", "\\")
+          }
+          ml += " -c -o{{output}}"
+          is_msvc_assembler = false
+        } else {
+          # Only affects Arm builds with is_clang = false, implemented for
+          # building V8 for Windows on Arm systems with the MSVC toolchain.
+          ml = "armasm64.exe"
+        }
       } else {
-        ml = "ml.exe"
+        if (toolchain_is_clang && !disable_llvm_ml) {
+          ml = "${_clang_bin_path}/llvm-ml${_exe}"
+          if (toolchain_args.current_cpu == "x64") {
+            ml += " -m64"
+          } else {
+            ml += " -m32"
+          }
+        } else {
+          if (toolchain_args.current_cpu == "x64") {
+            ml = "ml64.exe"
+          } else {
+            ml = "ml.exe"
+          }
+        }
       }
-      asm_wrapper =
-          rebase_path("//build/toolchain/win/asm_wrapper.py", root_build_dir)
-      command = "$python_path $asm_wrapper $env $ml {{defines}} {{include_dirs}} {{asmflags}} /c /Fo{{output}} {{source}}"
+
+      if (is_msvc_assembler) {
+        ml += " /nologo /Fo{{output}}"
+
+        # Suppress final-stage linking on x64/x86 builds. (Armasm64 does not
+        # require /c because it doesn't support linking.)
+        if (toolchain_args.current_cpu != "arm64") {
+          ml += " /c"
+        }
+        if (use_lld && (!toolchain_is_clang || disable_llvm_ml)) {
+          # Wrap ml(64).exe with a script that makes its output deterministic.
+          # It's lld only because the script zaps obj Timestamp which
+          # link.exe /incremental looks at.
+          ml_py = rebase_path("//build/toolchain/win/ml.py", root_build_dir)
+          ml = "$python_path $ml_py $ml"
+        }
+
+        asm_wrapper =
+            rebase_path("//build/toolchain/win/asm_wrapper.py", root_build_dir)
+        if (toolchain_args.current_cpu == "arm64") {
+          # armasm64.exe does not support definitions passed via the command
+          # line. (Fortunately, they're not needed for compiling the V8
+          # snapshot, which is the only time this assembler is required.)
+          command = "$python_path $asm_wrapper $env $ml {{include_dirs}} {{asmflags}} {{source}}"
+        } else {
+          command = "$python_path $asm_wrapper $env $ml {{defines}} {{include_dirs}} {{asmflags}} {{source}}"
+        }
+      } else {
+        command = "$ml {{defines}} {{include_dirs}} {{asmflags}} {{source}}"
+      }
+
       description = "ASM {{output}}"
-      outputs = [
-        "$object_path.obj",
-      ]
+      outputs = [ "$object_path.obj" ]
     }
 
     tool("alink") {
       rspfile = "{{output}}.rsp"
-      command = "$linker_wrapper$lib /nologo ${sys_lib_flags}{{arflags}} /OUT:{{output}} @$rspfile"
+      command = "$linker_wrapper$lib /OUT:{{output}} /nologo ${sys_lib_flags}{{arflags}} @$rspfile"
       description = "LIB {{output}}"
       outputs = [
         # Ignore {{output_extension}} and always use .lib, there's no reason to
@@ -313,9 +362,7 @@ template("msvc_toolchain") {
       default_output_extension = ".dll"
       default_output_dir = "{{root_out_dir}}"
       description = "LINK_MODULE(DLL) {{output}}"
-      outputs = [
-        dllname,
-      ]
+      outputs = [ dllname ]
       if (symbol_level != 0) {
         outputs += [ pdbname ]
       }
@@ -348,9 +395,7 @@ template("msvc_toolchain") {
       default_output_extension = ".exe"
       default_output_dir = "{{root_out_dir}}"
       description = "LINK {{output}}"
-      outputs = [
-        exename,
-      ]
+      outputs = [ exename ]
       if (symbol_level != 0) {
         outputs += [ pdbname ]
       }
