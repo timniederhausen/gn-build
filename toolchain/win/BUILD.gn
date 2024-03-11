@@ -247,7 +247,8 @@ template("msvc_toolchain") {
           ml = "armasm64.exe"
         }
       } else {
-        if (toolchain_is_clang && !disable_llvm_ml) {
+        # TODO: llvm-ml doesn't honor /safeseh apparently? Disable it on x86
+        if (toolchain_is_clang && !(disable_llvm_ml || toolchain_args.current_cpu == "x86")) {
           ml = "\"${_clang_bin_path}/llvm-ml${_exe}\""
           if (toolchain_args.current_cpu == "x64") {
             ml += " -m64"
