@@ -32,9 +32,7 @@ declare_args() {
 
 if (gcc_version == 0 && !is_clang && !is_win) {
   if (is_android) {
-    # sync with //build/toolchain/android/BUILD.gn
-    import("//build/toolchain/android/settings.gni")
-    _exe = "${android_tool_prefix}gcc"
+    assert(false, "GCC builds are not supported")
   } else if (is_posix) {
     import("//build/toolchain/posix/settings.gni")
     _exe = gcc_cc
@@ -51,9 +49,8 @@ if (gcc_version == 0 && !is_clang && !is_win) {
 
 if (clang_version == 0 && is_clang && !is_win) {
   if (is_android) {
-    # sync with //build/toolchain/android/BUILD.gn
-    import("//build/toolchain/clang.gni")
-    _exe = "$clang_base_path/bin/clang"
+    import("//build/toolchain/android/settings.gni")
+    _exe = "$android_toolchain_root/bin/clang"
   } else if (is_posix) {
     import("//build/toolchain/posix/settings.gni")
     _exe = clang_cc

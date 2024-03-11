@@ -133,6 +133,12 @@ template("gcc_toolchain") {
     } else {
       nm = "nm"
     }
+    if (defined(invoker.strip)) {
+      strip = invoker.strip
+    } else {
+      strip = "strip"
+    }
+    strip = strip # avoid 'Assignment had no effect' above if strip was not used
 
     if (defined(invoker.shlib_extension)) {
       default_shlib_extension = invoker.shlib_extension
@@ -274,7 +280,7 @@ template("gcc_toolchain") {
       rspfile = sofile + ".rsp"
       pool = "//build/toolchain:link_pool($default_toolchain)"
 
-      if (defined(invoker.strip)) {
+      if (symbol_level == 0) {
         unstripped_sofile = "{{root_out_dir}}/lib.unstripped/$soname"
       } else {
         unstripped_sofile = sofile
@@ -300,8 +306,9 @@ template("gcc_toolchain") {
       assert(defined(readelf), "to solink you must have a readelf")
       assert(defined(nm), "to solink you must have an nm")
       strip_switch = ""
-      if (defined(invoker.strip)) {
-        strip_switch = "--strip=${invoker.strip} "
+      if (symbol_level == 0) {
+        assert(defined(strip), "to strip you must have an strip")
+        strip_switch = "--strip=${strip} "
       }
 
       # This needs a Python script to avoid using a complex shell command
@@ -350,7 +357,7 @@ template("gcc_toolchain") {
       rspfile = sofile + ".rsp"
       pool = "//build/toolchain:link_pool($default_toolchain)"
 
-      if (defined(invoker.strip)) {
+      if (symbol_level == 0) {
         unstripped_sofile = "{{root_out_dir}}/lib.unstripped/$soname"
       } else {
         unstripped_sofile = sofile
@@ -358,8 +365,9 @@ template("gcc_toolchain") {
 
       command = "$ld -shared {{ldflags}}${extra_ldflags} -o \"$unstripped_sofile\" -Wl,-soname=\"$soname\" @\"$rspfile\""
 
-      if (defined(invoker.strip)) {
-        strip_command = "${invoker.strip} --strip-unneeded -o \"$sofile\" \"$unstripped_sofile\""
+      if (symbol_level == 0) {
+        assert(defined(strip), "to strip you must have an strip")
+        strip_command = "${strip} --strip-unneeded -o \"$sofile\" \"$unstripped_sofile\""
         command += " && " + strip_command
       }
       rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive $solink_libs_section_prefix {{libs}} $solink_libs_section_postfix"
@@ -401,7 +409,7 @@ template("gcc_toolchain") {
 
       default_output_dir = "{{root_out_dir}}"
 
-      if (defined(invoker.strip)) {
+      if (symbol_level == 0) {
         unstripped_outfile = "{{root_out_dir}}/exe.unstripped/$exename"
       }
 
@@ -417,8 +425,9 @@ template("gcc_toolchain") {
       link_command = "$ld {{ldflags}}${extra_ldflags} -o \"$unstripped_outfile\" -Wl,--start-group @\"$rspfile\" {{solibs}} -Wl,--end-group $libs_section_prefix {{libs}} $libs_section_postfix"
 
       strip_switch = ""
-      if (defined(invoker.strip)) {
-        strip_switch = " --strip=\"${invoker.strip}\" --unstripped-file=\"$unstripped_outfile\""
+      if (symbol_level == 0) {
+        assert(defined(strip), "to strip you must have an strip")
+        strip_switch = " --strip=\"${strip}\" --unstripped-file=\"$unstripped_outfile\""
       }
 
       link_wrapper =

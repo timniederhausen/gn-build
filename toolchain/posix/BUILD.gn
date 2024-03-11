@@ -9,6 +9,7 @@ gcc_toolchain("clang_x86") {
   readelf = readelf
   ar = ar
   nm = nm
+  strip = strip
 
   toolchain_args = {
     current_cpu = "x86"
@@ -25,6 +26,7 @@ gcc_toolchain("x86") {
   readelf = readelf
   ar = ar
   nm = nm
+  strip = strip
 
   toolchain_args = {
     current_cpu = "x86"
@@ -41,6 +43,7 @@ gcc_toolchain("clang_x64") {
   readelf = readelf
   ar = ar
   nm = nm
+  strip = strip
 
   toolchain_args = {
     current_cpu = "x64"
@@ -57,6 +60,7 @@ gcc_toolchain("x64") {
   readelf = readelf
   ar = ar
   nm = nm
+  strip = strip
 
   toolchain_args = {
     current_cpu = "x64"
@@ -73,6 +77,7 @@ gcc_toolchain("clang_arm") {
   readelf = readelf
   ar = ar
   nm = nm
+  strip = strip
 
   toolchain_args = {
     current_cpu = "arm"
@@ -89,6 +94,7 @@ gcc_toolchain("arm") {
   readelf = readelf
   ar = ar
   nm = nm
+  strip = strip
 
   toolchain_args = {
     current_cpu = "arm"
@@ -105,6 +111,7 @@ gcc_toolchain("clang_arm64") {
   readelf = readelf
   ar = ar
   nm = nm
+  strip = strip
 
   toolchain_args = {
     current_cpu = "arm64"
@@ -121,6 +128,7 @@ gcc_toolchain("arm64") {
   readelf = readelf
   ar = ar
   nm = nm
+  strip = strip
 
   toolchain_args = {
     current_cpu = "arm64"

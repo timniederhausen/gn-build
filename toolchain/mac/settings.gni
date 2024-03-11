@@ -9,7 +9,11 @@ declare_args() {
   # Use the system install of Xcode for tools like ibtool, libtool, etc.
   # This does not affect the compiler. When this variable is false, targets will
   # instead use a hermetic install of Xcode.
-  use_system_xcode = true
+  if (host_os == "mac") {
+    use_system_xcode = true
+  } else {
+    use_system_xcode = false
+  }
 
   # The path to the hermetic install of Xcode. Only relevant when
   # use_system_xcode = false.
@@ -17,5 +21,9 @@ declare_args() {
 
   # Compile with Xcode version of clang instead of hermetic version shipped
   # with the build.
-  use_xcode_clang = true
+  if (host_os == "mac") {
+    use_xcode_clang = true
+  } else {
+    use_xcode_clang = false
+  }
 }

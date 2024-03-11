@@ -17,6 +17,9 @@ declare_args() {
   # Enable some optimizations that don't interfere with debugging.
   optimize_debug = false
 
+  # DWARF version
+  dwarf_version = 0
+
   # use_debug_fission: whether to use split DWARF debug info
   # files. This can reduce link time significantly, but is incompatible
   # with some utilities such as icecc and ccache. Requires gold and
