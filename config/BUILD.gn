@@ -6,6 +6,7 @@ import("//build/config/compiler.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 import("//build/toolchain/toolchain.gni")
 import("//build/toolchain/clang.gni")
+import("//build/toolchain/sysroot.gni")
 
 if (current_cpu == "arm" || current_cpu == "arm64") {
   import("//build/config/arm.gni")
@@ -255,6 +256,18 @@ config("compiler") {
 
     # Let clang find the linker in the NDK.
     ldflags += [ "--gcc-toolchain=$_rebased_android_toolchain_root" ]
+  } else if (gcc_toolchain == "" && use_sysroot && is_clang) {
+    _rebased_toolchain_root =
+        rebase_path(sysroot, root_build_dir)
+
+    cflags += [ "--gcc-toolchain=$_rebased_toolchain_root" ]
+    ldflags += [ "--gcc-toolchain=$_rebased_toolchain_root" ]
+  } else if (gcc_toolchain != "" && is_clang) {
+    _rebased_toolchain_root =
+        rebase_path(gcc_toolchain, root_build_dir)
+
+    cflags += [ "--gcc-toolchain=$_rebased_toolchain_root" ]
+    ldflags += [ "--gcc-toolchain=$_rebased_toolchain_root" ]
   }
 
   if (is_posix && use_lld) {
@@ -423,14 +436,24 @@ config("compiler_cpu_abi") {
     # CPU architecture. We may or may not be doing a cross compile now, so for
     # simplicity we always explicitly set the architecture.
     if (current_cpu == "x64") {
-      cflags += [
-        "-m64",
-        "-march=x86-64",
-      ]
-      ldflags += [ "-m64" ]
+      if (is_clang && is_linux && !is_android) {
+        cflags += [ "--target=x86_64-linux-gnu" ]
+        ldflags += [ "--target=x86_64-linux-gnu" ]
+      } else {
+        cflags += [
+          "-m64",
+          "-march=x86-64",
+        ]
+        ldflags += [ "-m64" ]
+      }
     } else if (current_cpu == "x86") {
-      cflags += [ "-m32" ]
-      ldflags += [ "-m32" ]
+      if (is_clang && is_linux && !is_android) {
+        cflags += [ "--target=i386-linux-gnu" ]
+        ldflags += [ "--target=i386-linux-gnu" ]
+      } else {
+        cflags += [ "-m32" ]
+        ldflags += [ "-m32" ]
+      }
     } else if (current_cpu == "arm") {
       if (is_clang && !is_android) {
         cflags += [ "--target=arm-linux-gnueabihf" ]
@@ -1235,7 +1258,14 @@ config("symbols") {
         "-g2",
       ]
     } else {
-      cflags = [ "-g2" ]
+      if (dwarf_version > 0) {
+        cflags = [
+          "-gdwarf-$dwarf_version",
+          "-g2",
+        ]
+      } else {
+        cflags = [ "-g2" ]
+      }
     }
     if (use_debug_fission) {
       cflags += [ "-gsplit-dwarf" ]

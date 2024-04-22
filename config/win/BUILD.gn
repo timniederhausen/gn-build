@@ -322,8 +322,8 @@ config("default_crt") {
     # CRT in Visual Studio releases related to Windows store applications.
     configs = [ ":dynamic_crt" ]
   } else {
-    # Desktop Windows: static CRT.
-    configs = [ ":static_crt" ]
+    # Desktop Windows: dynamic CRT.
+    configs = [ ":dynamic_crt" ]
   }
 }
 
