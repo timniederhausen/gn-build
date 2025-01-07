@@ -9,6 +9,8 @@ declare_args() {
   # The path of your Clang installation folder (without /bin).
   clang_base_path = ""
 
+  clang_resource_dir = ""
+
   # Set to true to use lld, the LLVM linker.
   use_lld = false
 

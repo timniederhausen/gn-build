@@ -80,7 +80,6 @@ template("android_gcc_toolchains_helper") {
 
 android_gcc_toolchains_helper("x86") {
   toolchain_root = android_toolchain_root
-  sysroot = "$android_ndk_root/$android_sysroot_subdir"
   lib_dir = "usr/lib/i686-linux-android"
   toolchain_args = {
     current_cpu = "x86"
@@ -89,7 +88,6 @@ android_gcc_toolchains_helper("x86") {
 
 android_gcc_toolchains_helper("arm") {
   toolchain_root = android_toolchain_root
-  sysroot = "$android_ndk_root/$android_sysroot_subdir"
   lib_dir = "usr/lib/i686-linux-android"
   toolchain_args = {
     current_cpu = "arm"
@@ -98,7 +96,6 @@ android_gcc_toolchains_helper("arm") {
 
 android_gcc_toolchains_helper("mipsel") {
   toolchain_root = android_toolchain_root
-  sysroot = "$android_ndk_root/$android_sysroot_subdir"
   lib_dir = "usr/lib/mipsel-linux-android"
   toolchain_args = {
     current_cpu = "mipsel"
@@ -107,7 +104,6 @@ android_gcc_toolchains_helper("mipsel") {
 
 android_gcc_toolchains_helper("x64") {
   toolchain_root = android_toolchain_root
-  sysroot = "$android_ndk_root/$android_sysroot_subdir"
   lib_dir = "usr/lib64/x86_64-linux-android"
   toolchain_args = {
     current_cpu = "x64"
@@ -116,7 +112,6 @@ android_gcc_toolchains_helper("x64") {
 
 android_gcc_toolchains_helper("arm64") {
   toolchain_root = android_toolchain_root
-  sysroot = "$android_ndk_root/$android_sysroot_subdir"
   lib_dir = "usr/lib/aarch64-linux-android"
   toolchain_args = {
     current_cpu = "arm64"
@@ -125,7 +120,6 @@ android_gcc_toolchains_helper("arm64") {
 
 android_gcc_toolchains_helper("mips64el") {
   toolchain_root = android_toolchain_root
-  sysroot = "$android_ndk_root/$android_sysroot_subdir"
   lib_dir = "usr/lib64/mips64el-linux-android"
   toolchain_args = {
     current_cpu = "mips64el"

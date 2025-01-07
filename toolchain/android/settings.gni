@@ -5,24 +5,18 @@
 # This file contains common system config stuff for the Android build.
 
 declare_args() {
-  android_ndk_root = "$external/android_tools/ndk"
-  android_ndk_version = "r25b"
-  android_ndk_major_version = 25
-
-  android_sdk_root = "$external/android_tools/sdk"
   android_sdk_version = "24"
-  android_sdk_build_tools_version = "24.0.2"
-
-  lint_android_sdk_root = "$external/android_tools/sdk"
-  lint_android_sdk_version = "24"
 
   # Libc++ library directory. Override to use a custom libc++ binary.
-  android_libcpp_lib_dir = ""
+  # android_libcpp_lib_dir = ""
 
   # Adds intrumentation to each function. Writes a file with the order that
   # functions are called at startup.
   use_order_profiling = false
 }
+
+import("//build/toolchain/clang.gni")
+import("//build/toolchain/sysroot.gni")
 
 # Host stuff -----------------------------------------------------------------
 
@@ -54,28 +48,18 @@ if (host_os == "linux") {
 # than just the current one) since these are needed by the Android toolchain
 # file to define toolchains for all possible targets in one pass.
 
-android_sdk = "${android_sdk_root}/platforms/android-${android_sdk_version}"
-
 # Path to the Android NDK and SDK.
-android_ndk_include_dir = "$android_ndk_root/usr/include"
-
-android_sdk_tools = "${android_sdk_root}/tools"
-android_sdk_build_tools =
-    "${android_sdk_root}/build-tools/$android_sdk_build_tools_version"
-
-# Path to the SDK's android.jar
-android_sdk_jar = "$android_sdk/android.jar"
-
-zipalign_path = "$android_sdk_build_tools/zipalign"
+android_ndk_include_dir = "$sysroot/usr/include"
 
 # Subdirectories inside android_ndk_root that contain the sysroot for the
 # associated platform.
 # If you raise this, reevaluate the snprintf=snprintf in ./BUILD.gn.
-android_sysroot_subdir = "toolchains/llvm/prebuilt/${android_host_os}-${android_host_arch}/sysroot"
+# android_sysroot_subdir = sysroot
 
 # Toolchain root directory for each build. The actual binaries are inside
 # a "bin" directory inside of these.
-android_toolchain_root = "$android_ndk_root/toolchains/llvm/prebuilt/${android_host_os}-${android_host_arch}"
+android_toolchain_root = clang_base_path
+android_toolchain_resource_dir = clang_resource_dir
 
 # Location of libgcc. This is only needed for the current GN toolchain, so we
 # only need to define the current one, rather than one for every platform
@@ -104,7 +88,7 @@ if (current_cpu == "x86") {
 
 # Toolchain stuff ------------------------------------------------------------
 
-android_libcpp_root = "$android_ndk_root/sources/cxx-stl/llvm-libc++"
+#android_libcpp_root = "$android_ndk_root/sources/cxx-stl/llvm-libc++"
 
 # ABI ------------------------------------------------------------------------
 
@@ -129,9 +113,9 @@ if (current_cpu == "x86") {
   assert(false, "Unknown Android ABI: " + current_cpu)
 }
 
-if (android_libcpp_lib_dir == "") {
-  android_libcpp_lib_dir = "${android_libcpp_root}/libs/${android_app_abi}"
-}
+# if (android_libcpp_lib_dir == "") {
+#   android_libcpp_lib_dir = "${android_libcpp_root}/libs/${android_app_abi}"
+# }
 
 # Secondary ABI -------------------------------------------------------------
 if (target_cpu == "arm64" || target_cpu == "x64" || target_cpu == "mips64el") {

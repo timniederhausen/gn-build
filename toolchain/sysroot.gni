@@ -16,9 +16,6 @@ declare_args() {
 if (current_os == target_os && current_cpu == target_cpu &&
     target_sysroot != "") {
   sysroot = target_sysroot
-} else if (is_android) {
-  import("//build/toolchain/android/settings.gni")
-  sysroot = "$android_ndk_root/$android_sysroot_subdir"
 } else if (is_mac) {
   import("//build/toolchain/mac/mac_sdk.gni")
   sysroot = mac_sdk_path

@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/toolchain/sysroot.gni")
 import("//build/toolchain/android/settings.gni")
 import("//build/config/sanitizers/sanitizers.gni")
 
@@ -23,7 +24,7 @@ config("compiler") {
     "HAVE_SYS_UIO_H",
 
     # Forces full rebuilds on NDK rolls.
-    "ANDROID_NDK_VERSION=${android_ndk_version}",
+    #"ANDROID_NDK_VERSION=${android_ndk_version}",
   ]
 
   _rebased_android_toolchain_root =
@@ -87,19 +88,22 @@ config("runtime_library") {
   # caution.
   cflags_cc = []
 
-  assert(android_ndk_major_version >= 25, "Android NDK older than r25b are not supported")
+  #assert(android_ndk_major_version >= 25, "Android NDK older than r25b are not supported")
 
   cflags_cc += [
     # "-isystem" + rebase_path("$android_libcpp_root/include", root_build_dir),
     # "-isystem" + rebase_path("$android_ndk_root/sources/cxx-stl/llvm-libc++abi/include", root_build_dir),
-    "-isystem" +
-        rebase_path("$android_ndk_root/sources/android/support/include",
-                    root_build_dir),
+    # "-isystem" + rebase_path("$android_ndk_root/sources/android/support/include", root_build_dir),
   ]
 
   defines = [ "__GNU_SOURCE=1" ]  # Necessary for clone().
   ldflags = [ "-nostartfiles" ]
-  lib_dirs = [ android_libcpp_lib_dir ]
+
+  lib_dirs = [
+    # android_libcpp_lib_dir,
+    sysroot + "/usr/lib/aarch64-linux-android",
+    sysroot + "/usr/lib/aarch64-linux-android/" + android_sdk_version,
+  ]
 
   # The libc++ runtime library (must come first).
   # ASan needs to dynamically link to libc++ even in static builds so
