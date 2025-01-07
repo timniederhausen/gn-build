@@ -294,7 +294,7 @@ template("msvc_toolchain") {
 
       # The use of inputs_newline is to work around a fixed per-line buffer
       # size in the linker.
-      rspfile_content = "{{libs}} {{solibs}} {{inputs_newline}} {{ldflags}}"
+      rspfile_content = "{{ldflags}} {{libs}} {{solibs}} {{inputs_newline}} {{ldflags}}"
     }
 
     tool("solink_module") {
