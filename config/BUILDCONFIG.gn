@@ -146,6 +146,9 @@ declare_args() {
   # can depend on each other (e.g. $external/mysql_connector -> $external/zlib)
   external = "//external"
 
+  # Project-wide C++ standard to use.
+  cpp_standard = 20
+
   # DON'T ADD MORE FLAGS HERE. Read the comment above.
 }
 
@@ -298,7 +301,7 @@ default_compiler_configs = [
   "//build/config:default_optimization",
   "//build/config:default_stack_frames",
   "//build/config:default_symbols",
-  "//build/config:c++20",
+  "//build/config:c++${cpp_standard}",
   "//build/config:rtti",
   "//build/config:exceptions",
   "//build/config:runtime_library",
