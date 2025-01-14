@@ -57,7 +57,7 @@ jobs:
           # see: https://github.com/timniederhausen/gn-build/runs/2483312992#step:9:24
           - slug: macos-amd64
             gen_args: 'is_clang=true is_official_build=true'
-            os: macos-12
+            os: macos-13
             ninja_release_name: v1.7.2/ninja-mac.zip
             gn_release_name: gn-macos-amd64.tar.gz
 
